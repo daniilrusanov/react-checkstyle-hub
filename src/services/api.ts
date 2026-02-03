@@ -6,7 +6,7 @@
  */
 
 /** Base URL for the backend API server */
-export const BACKEND_URL = 'http://localhost:8000';
+export const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Request body structure for starting a new analysis
