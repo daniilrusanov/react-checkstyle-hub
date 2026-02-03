@@ -5,16 +5,15 @@
  */
 
 import { useState } from 'react';
-import { User, LogOut, ChevronDown, History, BarChart3 } from 'lucide-react';
+import { User, LogOut, ChevronDown, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, getThemeColors } from '../context/ThemeContext';
 
 interface UserMenuProps {
     onShowHistory?: () => void;
-    onShowStats?: () => void;
 }
 
-export const UserMenu = ({ onShowHistory, onShowStats }: UserMenuProps) => {
+export const UserMenu = ({ onShowHistory }: UserMenuProps) => {
     const { user, logout } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const { isDark } = useTheme();
@@ -168,44 +167,8 @@ export const UserMenu = ({ onShowHistory, onShowStats }: UserMenuProps) => {
                                         e.currentTarget.style.color = colors.textSecondary;
                                     }}
                                 >
-                                    <History size={18} />
-                                    Історія аналізів
-                                </button>
-                            )}
-                            
-                            {onShowStats && (
-                                <button
-                                    onClick={() => {
-                                        onShowStats();
-                                        setIsOpen(false);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        padding: '12px',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        borderRadius: '10px',
-                                        color: colors.textSecondary,
-                                        fontSize: '15px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = isDark 
-                                            ? 'rgba(255, 255, 255, 0.05)'
-                                            : 'rgba(0, 0, 0, 0.05)';
-                                        e.currentTarget.style.color = colors.textPrimary;
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'transparent';
-                                        e.currentTarget.style.color = colors.textSecondary;
-                                    }}
-                                >
                                     <BarChart3 size={18} />
-                                    Статистика
+                                    Панель користувача
                                 </button>
                             )}
 

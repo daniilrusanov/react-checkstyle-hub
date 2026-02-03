@@ -32,6 +32,19 @@
         font-feature-settings: "rlig" 1, "calt" 1;
         transition: background-color 0.3s ease, color 0.3s ease;
     }
+
+    /* Style number input spinners */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        opacity: 1;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    [data-theme="dark"] input[type="number"]::-webkit-inner-spin-button,
+    [data-theme="dark"] input[type="number"]::-webkit-outer-spin-button {
+        filter: invert(1);
+    }
 }
 
 @layer utilities {

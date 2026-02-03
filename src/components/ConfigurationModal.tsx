@@ -99,26 +99,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
     };
 
     /**
-     * Updates user experience level
+     * Updates user experience level (local state only, saved with handleSave)
      */
-    const handleExperienceLevelChange = async (level: ExperienceLevel) => {
+    const handleExperienceLevelChange = (level: ExperienceLevel) => {
         setExperienceLevel(level);
-        if (isAuthenticated) {
-            try {
-                const updatedUser = await updateExperienceLevel(level);
-                // Update the context with the new user data
-                updateUser({ experienceLevel: updatedUser.experienceLevel });
-                // Reload configuration to get updated timestamp
-                await loadConfiguration();
-                toast.success('Рівень досвіду оновлено');
-            } catch {
-                // Revert local state on error
-                if (user) {
-                    setExperienceLevel(user.experienceLevel);
-                }
-                toast.error('Не вдалося оновити рівень досвіду');
-            }
-        }
     };
 
     /**
@@ -161,9 +145,21 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
             const updated = await updateConfiguration(updateDto);
             setConfig(updated);
 
-            // If logged in, also save to user settings
+            // If logged in, also save to user settings and experience level
             if (isAuthenticated) {
                 await updateUserSettings(updateDto);
+                
+                // Save experience level if it changed
+                if (user && experienceLevel !== user.experienceLevel) {
+                    try {
+                        const updatedUser = await updateExperienceLevel(experienceLevel);
+                        updateUser({ experienceLevel: updatedUser.experienceLevel });
+                    } catch {
+                        // Experience level save failed, but settings were saved
+                        toast.error('Не вдалося оновити рівень досвіду');
+                    }
+                }
+                
                 toast.success('Налаштування збережено до вашого профілю!');
             } else {
                 toast.success('Конфігурацію успішно збережено!');
@@ -562,6 +558,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                 ].map((option) => (
                                                     <button
                                                         key={option.value}
+                                                        type="button"
                                                         onClick={() => handleExperienceLevelChange(option.value)}
                                                         style={{
                                                             flex: 1,
@@ -629,6 +626,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             onChange={(e) => updateField('severity', e.target.value)}
                                             style={{
                                                 width: '100%',
+                                                boxSizing: 'border-box',
                                                 padding: '12px 16px',
                                                 background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                                                 border: `1px solid ${colors.borderSecondary}`,
@@ -669,6 +667,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             max="200"
                                             style={{
                                                 width: '100%',
+                                                boxSizing: 'border-box',
                                                 padding: '12px 16px',
                                                 background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                                                 border: `1px solid ${colors.borderSecondary}`,

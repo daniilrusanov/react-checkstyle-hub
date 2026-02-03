@@ -18,10 +18,11 @@ import { ConfigurationModal } from './components/ConfigurationModal';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { HistoryModal } from './components/HistoryModal';
+import { UserDashboard } from './components/UserDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useAuth } from './context/AuthContext';
 import { useTheme, getThemeColors } from './context/ThemeContext';
-import { startAnalysis, fetchResults, pollStatus, type AnalysisResult, type AnalysisStatus } from './services/api';
+import { startAnalysis, fetchResults, pollStatus, analyzeCode, type AnalysisResult, type AnalysisStatus } from './services/api';
 import { connectWebSocket, type LogEntry } from './services/socket';
 import './index.css';
 
@@ -53,6 +54,10 @@ function App() {
     const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
     /** Controls history modal visibility */
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    /** Controls user dashboard visibility */
+    const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+    /** External URL for form (set from history/dashboard) */
+    const [externalRepoUrl, setExternalRepoUrl] = useState<string | undefined>(undefined);
     
     /** Auth context */
     const { isAuthenticated } = useAuth();
@@ -163,6 +168,95 @@ function App() {
                 level: 'INFO', 
                 message: `Знайдено ${analysisResults.length} порушень` 
             }]);
+
+        } catch (error) {
+            const errorMessage = (error instanceof Error) ? error.message : 'Невідома помилка';
+            setLogs(prev => [...prev, { level: 'ERROR', message: `Помилка: ${errorMessage}` }]);
+            setAnalysisStatus('FAILED');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    /**
+     * Handles direct code analysis submission
+     * 
+     * @param code - Java source code to analyze
+     * @param fileName - Optional filename for the code
+     */
+    const handleCodeAnalysis = async (code: string, fileName?: string) => {
+        if (isAnalyzing) return;
+
+        setIsAnalyzing(true);
+        setLogs([]);
+        setResults([]);
+        setAnalysisStatus(null);
+
+        try {
+            setLogs(prev => [...prev, { level: 'INFO', message: 'Починаю аналіз коду...' }]);
+            
+            if (fileName) {
+                setLogs(prev => [...prev, { level: 'INFO', message: `Файл: ${fileName}` }]);
+            }
+
+            setLogs(prev => [...prev, { level: 'INFO', message: 'Перевірка компіляції...' }]);
+
+            const result = await analyzeCode({
+                code,
+                fileName,
+                checkCompilation: true
+            });
+
+            if (!result.success) {
+                setLogs(prev => [...prev, { level: 'ERROR', message: `Помилка: ${result.errorMessage}` }]);
+                setAnalysisStatus('FAILED');
+                return;
+            }
+
+            // Log compilation results
+            if (result.compilationSuccess !== undefined) {
+                if (result.compilationSuccess) {
+                    setLogs(prev => [...prev, { level: 'INFO', message: '✅ Код успішно компілюється' }]);
+                } else {
+                    setLogs(prev => [...prev, { level: 'WARNING', message: '❌ Код не компілюється' }]);
+                    for (const error of result.compilationErrors) {
+                        setLogs(prev => [...prev, { 
+                            level: 'ERROR', 
+                            message: `Рядок ${error.lineNumber}: ${error.message}` 
+                        }]);
+                    }
+                }
+            }
+
+            // Log Checkstyle analysis
+            setLogs(prev => [...prev, { level: 'INFO', message: 'Запуск аналізу Checkstyle...' }]);
+
+            // Convert violations to results format
+            const analysisResults: AnalysisResult[] = result.violations.map((v, index) => ({
+                id: index,
+                filePath: v.filePath,
+                lineNumber: v.lineNumber,
+                severity: v.severity,
+                message: v.message
+            }));
+
+            setResults(analysisResults);
+
+            // Log quality score
+            if (result.qualityScore !== undefined) {
+                const scoreEmoji = result.qualityScore >= 80 ? '🌟' : result.qualityScore >= 60 ? '👍' : '⚠️';
+                setLogs(prev => [...prev, { 
+                    level: 'INFO', 
+                    message: `${scoreEmoji} Оцінка якості коду: ${result.qualityScore}/100` 
+                }]);
+            }
+
+            setLogs(prev => [...prev, { 
+                level: 'INFO', 
+                message: `Аналіз завершено. Знайдено ${result.violationCount} порушень.` 
+            }]);
+
+            setAnalysisStatus('COMPLETED');
 
         } catch (error) {
             const errorMessage = (error instanceof Error) ? error.message : 'Невідома помилка';
@@ -411,7 +505,7 @@ function App() {
                                 {/* Auth section */}
                                 {isAuthenticated ? (
                                     <UserMenu 
-                                        onShowHistory={() => setIsHistoryModalOpen(true)}
+                                        onShowHistory={() => setIsDashboardOpen(true)}
                                     />
                                 ) : (
                                     <button
@@ -458,7 +552,12 @@ function App() {
                         animationDelay: '0.1s',
                         animationFillMode: 'both'
                     }}>
-                        <AnalysisForm isAnalyzing={isAnalyzing} onSubmit={handleAnalysisStart} />
+                        <AnalysisForm 
+                            isAnalyzing={isAnalyzing} 
+                            onSubmit={handleAnalysisStart} 
+                            onCodeSubmit={handleCodeAnalysis}
+                            externalUrl={externalRepoUrl}
+                        />
                         
                         {/* Status indicator */}
                         {analysisStatus && isAnalyzing && (
@@ -621,6 +720,19 @@ function App() {
                     isOpen={isHistoryModalOpen}
                     onClose={() => setIsHistoryModalOpen(false)}
                     onViewResults={loadHistoryResults}
+                />
+                
+                <UserDashboard
+                    isOpen={isDashboardOpen}
+                    onClose={() => setIsDashboardOpen(false)}
+                    onViewResults={loadHistoryResults}
+                    onAnalyzeRepo={(repoUrl) => {
+                        setIsDashboardOpen(false);
+                        // Set URL in form (will switch to URL tab automatically)
+                        setExternalRepoUrl(repoUrl);
+                        // Clear after a tick to allow re-setting the same URL
+                        setTimeout(() => setExternalRepoUrl(undefined), 100);
+                    }}
                 />
             </div>
         </>

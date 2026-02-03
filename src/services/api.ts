@@ -170,3 +170,70 @@ export const fetchResults = async (requestId: string): Promise<AnalysisResult[]>
 
     return await response.json() as Promise<AnalysisResult[]>;
 };
+
+/**
+ * Compilation error from the Java compiler
+ */
+export interface CompilationError {
+    lineNumber: number;
+    columnNumber: number;
+    message: string;
+    kind: string;
+}
+
+/**
+ * Response from direct code analysis
+ */
+export interface CodeAnalysisResponse {
+    success: boolean;
+    errorMessage?: string;
+    compilationSuccess?: boolean;
+    compilationErrors: CompilationError[];
+    violations: AnalysisResult[];
+    violationCount: number;
+    qualityScore?: number;
+}
+
+/**
+ * Request body for direct code analysis
+ */
+export interface CodeAnalysisRequest {
+    code: string;
+    fileName?: string;
+    checkCompilation?: boolean;
+    checkstyleConfig?: string;
+}
+
+/**
+ * Analyzes Java code directly without requiring a GitHub repository
+ * 
+ * Ideal for students and quick code checks. Supports compilation
+ * checking and returns a quality score.
+ *
+ * @param request - The code analysis request
+ * @returns Promise resolving to analysis results
+ * @throws Error if the request fails
+ *
+ * @example
+ * const result = await analyzeCode({
+ *   code: 'public class Main { public static void main(String[] args) {} }',
+ *   checkCompilation: true
+ * });
+ */
+export const analyzeCode = async (request: CodeAnalysisRequest): Promise<CodeAnalysisResponse> => {
+    const response = await fetch(`${BACKEND_URL}/api/analyze/code`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Помилка серверу: ${response.status}. ${errorText}`);
+    }
+
+    return await response.json() as CodeAnalysisResponse;
+};
