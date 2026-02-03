@@ -3,17 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+    /* Dark theme (default) */
+    :root,
+    [data-theme="dark"] {
+        --bg-primary: rgb(2, 6, 23);
+        --bg-secondary: rgb(15, 23, 42);
+        --text-primary: #fafaff;
+        --text-secondary: rgb(148, 163, 184);
+        --scrollbar-track: rgba(255, 255, 255, 0.02);
+        --scrollbar-thumb: rgba(59, 130, 246, 0.4);
+        --scrollbar-thumb-hover: rgba(59, 130, 246, 0.6);
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+        --bg-primary: rgb(248, 250, 252);
+        --bg-secondary: rgb(241, 245, 249);
+        --text-primary: rgb(15, 23, 42);
+        --text-secondary: rgb(71, 85, 105);
+        --scrollbar-track: rgba(0, 0, 0, 0.05);
+        --scrollbar-thumb: rgba(59, 130, 246, 0.5);
+        --scrollbar-thumb-hover: rgba(59, 130, 246, 0.7);
+    }
+
     body {
-        background-color: #020617;
-        color: #fafaff;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
         font-feature-settings: "rlig" 1, "calt" 1;
+        transition: background-color 0.3s ease, color 0.3s ease;
     }
 }
 
 @layer utilities {
     .custom-scrollbar {
         scrollbar-width: thin;
-        scrollbar-color: rgba(59, 130, 246, 0.3) rgba(255, 255, 255, 0.05);
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     }
 
     .custom-scrollbar::-webkit-scrollbar {
@@ -22,18 +46,18 @@
     }
 
     .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--scrollbar-track);
         border-radius: 10px;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(59, 130, 246, 0.4);
+        background: var(--scrollbar-thumb);
         border-radius: 10px;
-        border: 2px solid rgba(255, 255, 255, 0.02);
+        border: 2px solid var(--scrollbar-track);
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(59, 130, 246, 0.6);
+        background: var(--scrollbar-thumb-hover);
     }
 
     @keyframes fadeIn {

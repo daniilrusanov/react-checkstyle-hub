@@ -7,9 +7,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, RotateCcw, CheckCircle, XCircle, Loader2, Settings2 } from 'lucide-react';
+import { X, Save, RotateCcw, CheckCircle, XCircle, Loader2, Settings2, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getConfiguration, updateConfiguration, type CheckstyleConfig, type UpdateConfigDto } from '../services/configuration';
+import { getUserSettings, updateUserSettings, updateExperienceLevel, type ExperienceLevel } from '../services/auth';
+import { useAuth } from '../context/AuthContext';
+import { useTheme, getThemeColors } from '../context/ThemeContext';
 import { CHECKSTYLE_RULES, RULE_CATEGORIES, getRulesByCategory } from '../data/checkstyleRules';
 
 /**
@@ -40,25 +43,54 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
     const [isSaving, setIsSaving] = useState(false);
     /** Current configuration state (local edits) */
     const [config, setConfig] = useState<CheckstyleConfig | null>(null);
+    /** User experience level */
+    const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('STUDENT');
+    
+    /** Auth context */
+    const { isAuthenticated, user, updateUser } = useAuth();
+    
+    /** Theme context */
+    const { isDark } = useTheme();
+    const colors = getThemeColors(isDark);
 
     /**
-     * Load configuration when modal opens
+     * Load configuration when modal opens or auth state changes
      */
     useEffect(() => {
         if (isOpen) {
             loadConfiguration();
         }
-    }, [isOpen]);
+    }, [isOpen, isAuthenticated, user?.username]);
 
     /**
      * Fetches the current configuration from the backend
-     * and updates the local state
+     * For logged-in users, loads their saved settings
+     * For guests, loads default server config with all rules enabled
      */
     const loadConfiguration = async () => {
         setIsLoading(true);
         try {
-            const data = await getConfiguration();
-            setConfig(data);
+            // First load the server config
+            const serverConfig = await getConfiguration();
+            
+            // If user is logged in, overlay their settings and load experience level
+            if (isAuthenticated && user) {
+                setExperienceLevel(user.experienceLevel);
+                try {
+                    const userSettings = await getUserSettings();
+                    setConfig({
+                        ...serverConfig,
+                        ...userSettings
+                    });
+                } catch {
+                    // User settings not found, use server config
+                    setConfig(serverConfig);
+                }
+            } else {
+                // For guests, reset experience level and use server config
+                setExperienceLevel('STUDENT');
+                setConfig(serverConfig);
+            }
         } catch (error) {
             toast.error(`Помилка завантаження: ${(error as Error).message}`);
         } finally {
@@ -67,7 +99,31 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
     };
 
     /**
+     * Updates user experience level
+     */
+    const handleExperienceLevelChange = async (level: ExperienceLevel) => {
+        setExperienceLevel(level);
+        if (isAuthenticated) {
+            try {
+                const updatedUser = await updateExperienceLevel(level);
+                // Update the context with the new user data
+                updateUser({ experienceLevel: updatedUser.experienceLevel });
+                // Reload configuration to get updated timestamp
+                await loadConfiguration();
+                toast.success('Рівень досвіду оновлено');
+            } catch {
+                // Revert local state on error
+                if (user) {
+                    setExperienceLevel(user.experienceLevel);
+                }
+                toast.error('Не вдалося оновити рівень досвіду');
+            }
+        }
+    };
+
+    /**
      * Saves the current configuration state to the backend
+     * For logged-in users, also saves to their user settings
      * Shows success/error notifications
      */
     const handleSave = async () => {
@@ -101,9 +157,17 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                 avoidEscapedUnicodeCharacters: config.avoidEscapedUnicodeCharacters,
             };
 
+            // Save to server config
             const updated = await updateConfiguration(updateDto);
             setConfig(updated);
-            toast.success('Конфігурацію успішно збережено!');
+
+            // If logged in, also save to user settings
+            if (isAuthenticated) {
+                await updateUserSettings(updateDto);
+                toast.success('Налаштування збережено до вашого профілю!');
+            } else {
+                toast.success('Конфігурацію успішно збережено!');
+            }
         } catch (error) {
             toast.error(`Помилка збереження: ${(error as Error).message}`);
         } finally {
@@ -225,7 +289,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                 right: 0,
                 bottom: 0,
                 zIndex: 99999,
-                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                backgroundColor: colors.bgOverlay,
                 backdropFilter: 'blur(8px)',
                 display: 'flex',
                 justifyContent: 'flex-end',
@@ -245,11 +309,15 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                     maxHeight: '90vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    background: 'rgba(15, 15, 25, 0.98)',
+                    background: isDark 
+                        ? 'rgba(15, 15, 25, 0.98)'
+                        : 'rgba(255, 255, 255, 0.98)',
                     backdropFilter: 'blur(40px)',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
+                    border: `2px solid ${colors.borderAccent}`,
                     borderRadius: '16px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+                    boxShadow: isDark 
+                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
+                        : '0 25px 50px -12px rgba(0, 0, 0, 0.2)',
                     marginTop: '16px',
                     animation: 'fadeIn 0.3s ease-out'
                 }}
@@ -257,8 +325,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                 {/* Header - Fixed */}
                 <div style={{
                     padding: '32px',
-                    borderBottom: '2px solid rgba(59, 130, 246, 0.2)',
-                    background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1))'
+                    borderBottom: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
+                    background: isDark 
+                        ? 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1))'
+                        : 'linear-gradient(to right, rgba(59, 130, 246, 0.08), rgba(6, 182, 212, 0.08))'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -266,19 +336,21 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                 width: '56px',
                                 height: '56px',
                                 borderRadius: '12px',
-                                background: 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
-                                border: '2px solid rgba(59, 130, 246, 0.3)',
+                                background: isDark 
+                                    ? 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))'
+                                    : 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.15))',
+                                border: `2px solid ${colors.borderAccent}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
                             }}>
-                                <Settings2 style={{ width: '28px', height: '28px', color: 'rgb(96, 165, 250)' }} />
+                                <Settings2 style={{ width: '28px', height: '28px', color: colors.accentLight }} />
                             </div>
                             <div>
-                                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>
+                                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '4px' }}>
                                     Налаштування Checkstyle
                                 </h2>
-                                <p style={{ fontSize: '14px', color: 'rgb(148, 163, 184)' }}>
+                                <p style={{ fontSize: '14px', color: colors.textSecondary }}>
                                     Керуйте правилами аналізу коду
                                 </p>
                             </div>
@@ -291,22 +363,28 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                                border: `1px solid ${colors.borderSecondary}`,
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                                e.currentTarget.style.background = isDark 
+                                    ? 'rgba(239, 68, 68, 0.2)'
+                                    : 'rgba(220, 38, 38, 0.1)';
+                                e.currentTarget.style.borderColor = isDark 
+                                    ? 'rgba(239, 68, 68, 0.5)'
+                                    : 'rgba(220, 38, 38, 0.4)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.background = isDark 
+                                    ? 'rgba(255, 255, 255, 0.05)'
+                                    : 'rgba(0, 0, 0, 0.05)';
+                                e.currentTarget.style.borderColor = colors.borderSecondary;
                             }}
                         >
-                            <X style={{ width: '20px', height: '20px', color: 'rgb(248, 113, 113)' }} />
+                            <X style={{ width: '20px', height: '20px', color: colors.error }} />
                         </button>
                     </div>
                 </div>
@@ -326,16 +404,16 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                             justifyContent: 'center',
                             padding: '64px 0'
                         }}>
-                            <Loader2 className="animate-spin" style={{ width: '48px', height: '48px', color: 'rgb(96, 165, 250)', marginBottom: '16px' }} />
-                            <p style={{ fontSize: '16px', color: 'rgb(148, 163, 184)' }}>Завантаження конфігурації...</p>
+                            <Loader2 className="animate-spin" style={{ width: '48px', height: '48px', color: colors.accentLight, marginBottom: '16px' }} />
+                            <p style={{ fontSize: '16px', color: colors.textSecondary }}>Завантаження конфігурації...</p>
                         </div>
                     ) : config ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             {/* Info Box */}
                             <div style={{
                                 padding: '20px',
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                background: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+                                border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
                                 borderRadius: '12px'
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -343,20 +421,20 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                         width: '8px',
                                         height: '8px',
                                         borderRadius: '50%',
-                                        background: 'rgb(96, 165, 250)'
+                                        background: colors.accentLight
                                     }}></div>
-                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'rgb(96, 165, 250)' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: colors.accentLight }}>
                                         Конфігурація: {config.configName}
                                     </span>
                                 </div>
-                                <p style={{ fontSize: '14px', color: 'rgb(148, 163, 184)', marginLeft: '20px' }}>
+                                <p style={{ fontSize: '14px', color: colors.textSecondary, marginLeft: '20px' }}>
                                     Оновлено: {new Date(config.updatedAt).toLocaleString('uk-UA')}
                                 </p>
                             </div>
 
                             {/* Quick Actions */}
                             <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '12px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '12px' }}>
                                     Швидкі дії
                                 </h3>
                                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -365,10 +443,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                         style={{
                                             flex: 1,
                                             padding: '12px 20px',
-                                            background: 'rgba(34, 197, 94, 0.1)',
-                                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                                            background: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(22, 163, 74, 0.08)',
+                                            border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(22, 163, 74, 0.3)'}`,
                                             borderRadius: '8px',
-                                            color: 'rgb(74, 222, 128)',
+                                            color: colors.success,
                                             fontSize: '14px',
                                             fontWeight: '600',
                                             cursor: 'pointer',
@@ -379,12 +457,12 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             transition: 'all 0.2s'
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)';
-                                            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                                            e.currentTarget.style.background = isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(22, 163, 74, 0.15)';
+                                            e.currentTarget.style.borderColor = isDark ? 'rgba(34, 197, 94, 0.5)' : 'rgba(22, 163, 74, 0.5)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
-                                            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                                            e.currentTarget.style.background = isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(22, 163, 74, 0.08)';
+                                            e.currentTarget.style.borderColor = isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(22, 163, 74, 0.3)';
                                         }}
                                     >
                                         <CheckCircle style={{ width: '16px', height: '16px' }} />
@@ -395,10 +473,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                         style={{
                                             flex: 1,
                                             padding: '12px 20px',
-                                            background: 'rgba(239, 68, 68, 0.1)',
-                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(220, 38, 38, 0.08)',
+                                            border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(220, 38, 38, 0.3)'}`,
                                             borderRadius: '8px',
-                                            color: 'rgb(248, 113, 113)',
+                                            color: colors.error,
                                             fontSize: '14px',
                                             fontWeight: '600',
                                             cursor: 'pointer',
@@ -409,12 +487,12 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             transition: 'all 0.2s'
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                                            e.currentTarget.style.background = isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(220, 38, 38, 0.15)';
+                                            e.currentTarget.style.borderColor = isDark ? 'rgba(239, 68, 68, 0.5)' : 'rgba(220, 38, 38, 0.5)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                            e.currentTarget.style.background = isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(220, 38, 38, 0.08)';
+                                            e.currentTarget.style.borderColor = isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(220, 38, 38, 0.3)';
                                         }}
                                     >
                                         <XCircle style={{ width: '16px', height: '16px' }} />
@@ -431,44 +509,119 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                             }}>
                                 <div style={{
                                     padding: '16px',
-                                    background: 'rgba(34, 197, 94, 0.1)',
-                                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                                    background: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(22, 163, 74, 0.08)',
+                                    border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(22, 163, 74, 0.2)'}`,
                                     borderRadius: '12px'
                                 }}>
-                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'rgb(74, 222, 128)', marginBottom: '4px' }}>
+                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.success, marginBottom: '4px' }}>
                                         {getEnabledRulesCount()}
                                     </div>
-                                    <div style={{ fontSize: '14px', color: 'rgb(148, 163, 184)' }}>Активних правил</div>
+                                    <div style={{ fontSize: '14px', color: colors.textSecondary }}>Активних правил</div>
                                 </div>
                                 <div style={{
                                     padding: '16px',
-                                    background: 'rgba(251, 191, 36, 0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.2)',
+                                    background: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(202, 138, 4, 0.08)',
+                                    border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(202, 138, 4, 0.2)'}`,
                                     borderRadius: '12px'
                                 }}>
-                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'rgb(251, 191, 36)', marginBottom: '4px' }}>
+                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.warning, marginBottom: '4px' }}>
                                         {config.lineLength}
                                     </div>
-                                    <div style={{ fontSize: '14px', color: 'rgb(148, 163, 184)' }}>Символів у рядку</div>
+                                    <div style={{ fontSize: '14px', color: colors.textSecondary }}>Символів у рядку</div>
                                 </div>
                             </div>
+
+                            {/* User Profile Settings - only for authenticated users */}
+                            {isAuthenticated && (
+                                <div>
+                                    <h3 style={{
+                                        fontSize: '18px',
+                                        fontWeight: 'bold',
+                                        color: colors.textPrimary,
+                                        marginBottom: '16px',
+                                        paddingBottom: '12px',
+                                        borderBottom: `2px solid ${isDark ? 'rgba(168, 85, 247, 0.3)' : 'rgba(147, 51, 234, 0.3)'}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px'
+                                    }}>
+                                        <User style={{ width: '20px', height: '20px', color: isDark ? 'rgb(168, 85, 247)' : 'rgb(147, 51, 234)' }} />
+                                        Профіль користувача
+                                    </h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        {/* Experience Level */}
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: colors.textPrimary, marginBottom: '12px' }}>
+                                                Рівень досвіду
+                                            </label>
+                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                {[
+                                                    { value: 'STUDENT' as ExperienceLevel, label: 'Студент', color: isDark ? 'rgb(34, 197, 94)' : 'rgb(22, 163, 74)' },
+                                                    { value: 'JUNIOR' as ExperienceLevel, label: 'Джун', color: 'rgb(59, 130, 246)' },
+                                                    { value: 'ADVANCED' as ExperienceLevel, label: 'Просунутий', color: isDark ? 'rgb(168, 85, 247)' : 'rgb(147, 51, 234)' }
+                                                ].map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        onClick={() => handleExperienceLevelChange(option.value)}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '14px 16px',
+                                                            background: experienceLevel === option.value 
+                                                                ? `${option.color}20` 
+                                                                : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)'),
+                                                            border: `2px solid ${experienceLevel === option.value 
+                                                                ? option.color 
+                                                                : colors.borderSecondary}`,
+                                                            borderRadius: '12px',
+                                                            color: experienceLevel === option.value 
+                                                                ? option.color 
+                                                                : colors.textSecondary,
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (experienceLevel !== option.value) {
+                                                                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+                                                                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
+                                                            }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (experienceLevel !== option.value) {
+                                                                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)';
+                                                                e.currentTarget.style.borderColor = colors.borderSecondary;
+                                                            }
+                                                        }}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <p style={{ fontSize: '12px', color: colors.textMuted, marginTop: '10px' }}>
+                                                Рівень досвіду використовується для персоналізації рекомендацій
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* General Settings */}
                             <div>
                                 <h3 style={{
                                     fontSize: '18px',
                                     fontWeight: 'bold',
-                                    color: 'white',
+                                    color: colors.textPrimary,
                                     marginBottom: '16px',
                                     paddingBottom: '12px',
-                                    borderBottom: '2px solid rgba(59, 130, 246, 0.2)'
+                                    borderBottom: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`
                                 }}>
                                     Загальні налаштування
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     {/* Severity */}
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: colors.textPrimary, marginBottom: '8px' }}>
                                             Рівень суворості
                                         </label>
                                         <select
@@ -477,10 +630,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             style={{
                                                 width: '100%',
                                                 padding: '12px 16px',
-                                                background: 'rgba(255, 255, 255, 0.05)',
-                                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                                border: `1px solid ${colors.borderSecondary}`,
                                                 borderRadius: '8px',
-                                                color: 'white',
+                                                color: colors.textPrimary,
                                                 fontSize: '14px',
                                                 outline: 'none',
                                                 cursor: 'pointer',
@@ -490,22 +643,22 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                 e.target.style.borderColor = 'rgb(59, 130, 246)';
                                             }}
                                             onBlur={(e) => {
-                                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                                e.target.style.borderColor = colors.borderSecondary;
                                             }}
                                         >
-                                            <option value="ignore" style={{ background: 'rgb(15, 15, 25)', color: 'white' }}>Ignore</option>
-                                            <option value="info" style={{ background: 'rgb(15, 15, 25)', color: 'white' }}>Info</option>
-                                            <option value="warning" style={{ background: 'rgb(15, 15, 25)', color: 'white' }}>Warning</option>
-                                            <option value="error" style={{ background: 'rgb(15, 15, 25)', color: 'white' }}>Error</option>
+                                            <option value="ignore" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Ignore</option>
+                                            <option value="info" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Info</option>
+                                            <option value="warning" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Warning</option>
+                                            <option value="error" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Error</option>
                                         </select>
-                                        <p style={{ fontSize: '12px', color: 'rgb(100, 116, 139)', marginTop: '6px' }}>
+                                        <p style={{ fontSize: '12px', color: colors.textMuted, marginTop: '6px' }}>
                                             Визначає базовий рівень суворості для всіх перевірок
                                         </p>
                                     </div>
 
                                     {/* Line Length */}
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '8px' }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: colors.textPrimary, marginBottom: '8px' }}>
                                             Максимальна довжина рядка
                                         </label>
                                         <input
@@ -517,10 +670,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                             style={{
                                                 width: '100%',
                                                 padding: '12px 16px',
-                                                background: 'rgba(255, 255, 255, 0.05)',
-                                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                                border: `1px solid ${colors.borderSecondary}`,
                                                 borderRadius: '8px',
-                                                color: 'white',
+                                                color: colors.textPrimary,
                                                 fontSize: '14px',
                                                 outline: 'none',
                                                 transition: 'all 0.2s'
@@ -529,10 +682,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                 e.target.style.borderColor = 'rgb(59, 130, 246)';
                                             }}
                                             onBlur={(e) => {
-                                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                                e.target.style.borderColor = colors.borderSecondary;
                                             }}
                                         />
-                                        <p style={{ fontSize: '12px', color: 'rgb(100, 116, 139)', marginTop: '6px' }}>
+                                        <p style={{ fontSize: '12px', color: colors.textMuted, marginTop: '6px' }}>
                                             Максимальна кількість символів у рядку коду (80-200)
                                         </p>
                                     </div>
@@ -549,10 +702,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                         <h3 style={{
                                             fontSize: '18px',
                                             fontWeight: 'bold',
-                                            color: 'white',
+                                            color: colors.textPrimary,
                                             marginBottom: '16px',
                                             paddingBottom: '12px',
-                                            borderBottom: '2px solid rgba(59, 130, 246, 0.2)'
+                                            borderBottom: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`
                                         }}>
                                             {category}
                                         </h3>
@@ -566,18 +719,18 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                         key={ruleKey}
                                                         style={{
                                                             padding: '16px',
-                                                            background: 'rgba(255, 255, 255, 0.02)',
-                                                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                            background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+                                                            border: `1px solid ${colors.borderPrimary}`,
                                                             borderRadius: '8px',
                                                             transition: 'all 0.2s'
                                                         }}
                                                         onMouseEnter={(e) => {
-                                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                                            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                                                            e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
+                                                            e.currentTarget.style.borderColor = colors.borderAccent;
                                                         }}
                                                         onMouseLeave={(e) => {
-                                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                                                            e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)';
+                                                            e.currentTarget.style.borderColor = colors.borderPrimary;
                                                         }}
                                                     >
                                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -594,10 +747,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                 }}
                                                             />
                                                             <div style={{ flex: 1 }}>
-                                                                <div style={{ fontSize: '15px', fontWeight: '600', color: 'white', marginBottom: '6px' }}>
+                                                                <div style={{ fontSize: '15px', fontWeight: '600', color: colors.textPrimary, marginBottom: '6px' }}>
                                                                     {rule.name}
                                                                 </div>
-                                                                <p style={{ fontSize: '13px', color: 'rgb(148, 163, 184)', lineHeight: '1.5' }}>
+                                                                <p style={{ fontSize: '13px', color: colors.textSecondary, lineHeight: '1.5' }}>
                                                                     {rule.description}
                                                                 </p>
                                                             </div>
@@ -607,9 +760,13 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                 fontSize: '12px',
                                                                 fontWeight: '600',
                                                                 whiteSpace: 'nowrap',
-                                                                background: isEnabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-                                                                color: isEnabled ? 'rgb(74, 222, 128)' : 'rgb(148, 163, 184)',
-                                                                border: `1px solid ${isEnabled ? 'rgba(34, 197, 94, 0.3)' : 'rgba(100, 116, 139, 0.3)'}`
+                                                                background: isEnabled 
+                                                                    ? (isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(22, 163, 74, 0.15)')
+                                                                    : (isDark ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.15)'),
+                                                                color: isEnabled ? colors.success : colors.textSecondary,
+                                                                border: `1px solid ${isEnabled 
+                                                                    ? (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(22, 163, 74, 0.3)')
+                                                                    : (isDark ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.25)')}`
                                                             }}>
                                                                 {isEnabled ? 'ON' : 'OFF'}
                                                             </div>
@@ -624,7 +781,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                         </div>
                     ) : (
                         <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                            <p style={{ fontSize: '16px', color: 'rgb(148, 163, 184)' }}>
+                            <p style={{ fontSize: '16px', color: colors.textSecondary }}>
                                 Не вдалося завантажити конфігурацію
                             </p>
                         </div>
@@ -634,8 +791,8 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                 {/* Footer - Fixed */}
                 <div style={{
                     padding: '24px 32px',
-                    borderTop: '2px solid rgba(59, 130, 246, 0.2)',
-                    background: 'rgba(15, 15, 25, 0.95)',
+                    borderTop: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
+                    background: isDark ? 'rgba(15, 15, 25, 0.95)' : 'rgba(248, 250, 252, 0.95)',
                     display: 'flex',
                     gap: '12px',
                     justifyContent: 'flex-end'
@@ -645,10 +802,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                         disabled={isLoading || isSaving}
                         style={{
                             padding: '14px 24px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                            border: `1px solid ${colors.borderSecondary}`,
                             borderRadius: '8px',
-                            color: 'white',
+                            color: colors.textPrimary,
                             fontSize: '15px',
                             fontWeight: '600',
                             cursor: (isLoading || isSaving) ? 'not-allowed' : 'pointer',
@@ -660,11 +817,11 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                         }}
                         onMouseEnter={(e) => {
                             if (!isLoading && !isSaving) {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
                             }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
                         }}
                     >
                         <RotateCcw style={{ width: '18px', height: '18px' }} />
@@ -686,7 +843,9 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)',
+                            boxShadow: isDark 
+                                ? '0 10px 15px -3px rgba(59, 130, 246, 0.3)'
+                                : '0 10px 15px -3px rgba(59, 130, 246, 0.2)',
                             transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {

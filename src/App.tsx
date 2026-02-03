@@ -9,12 +9,18 @@
  */
 
 import { useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, LogIn } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { AnalysisForm } from './components/AnalysisForm';
 import { LogTerminal } from './components/LogTerminal';
 import { ResultsTable } from './components/ResultsTable';
 import { ConfigurationModal } from './components/ConfigurationModal';
+import { AuthModal } from './components/AuthModal';
+import { UserMenu } from './components/UserMenu';
+import { HistoryModal } from './components/HistoryModal';
+import { ThemeToggle } from './components/ThemeToggle';
+import { useAuth } from './context/AuthContext';
+import { useTheme, getThemeColors } from './context/ThemeContext';
 import { startAnalysis, fetchResults, pollStatus, type AnalysisResult, type AnalysisStatus } from './services/api';
 import { connectWebSocket, type LogEntry } from './services/socket';
 import './index.css';
@@ -41,6 +47,40 @@ function App() {
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     /** Current status of the analysis */
     const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus['status'] | null>(null);
+    /** Controls auth modal visibility */
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    /** Auth modal initial tab */
+    const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
+    /** Controls history modal visibility */
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    
+    /** Auth context */
+    const { isAuthenticated } = useAuth();
+    
+    /** Theme context */
+    const { isDark } = useTheme();
+    const colors = getThemeColors(isDark);
+    
+    /**
+     * Opens the auth modal with specified tab
+     */
+    const openAuthModal = (tab: 'login' | 'register') => {
+        setAuthModalTab(tab);
+        setIsAuthModalOpen(true);
+    };
+
+    /**
+     * Load results from a previous analysis
+     */
+    const loadHistoryResults = async (requestId: number) => {
+        try {
+            const results = await fetchResults(String(requestId));
+            setResults(results);
+            setLogs([{ level: 'INFO', message: `Завантажено ${results.length} результатів з історії` }]);
+        } catch (error) {
+            console.error('Failed to load results:', error);
+        }
+    };
 
     /**
      * Gets a user-friendly status message for display
@@ -140,31 +180,88 @@ function App() {
                 toastOptions={{
                     duration: 4000,
                     style: {
-                        background: 'rgb(15 15 25)',
-                        color: 'rgb(250 250 255)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        background: isDark ? 'rgb(15, 15, 25)' : 'rgb(255, 255, 255)',
+                        color: colors.textPrimary,
+                        border: `1px solid ${colors.borderAccent}`,
                         padding: '16px',
                         fontSize: '15px',
+                        boxShadow: isDark 
+                            ? '0 10px 25px rgba(0, 0, 0, 0.5)' 
+                            : '0 10px 25px rgba(0, 0, 0, 0.15)',
                     },
                 }}
             />
             
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(to bottom right, rgb(2, 6, 23), rgb(15, 23, 42), rgb(2, 6, 23))',
-                position: 'relative'
+                background: isDark 
+                    ? 'linear-gradient(to bottom right, rgb(2, 6, 23), rgb(15, 23, 42), rgb(2, 6, 23))'
+                    : 'linear-gradient(to bottom right, rgb(248, 250, 252), rgb(241, 245, 249), rgb(248, 250, 252))',
+                position: 'relative',
+                transition: 'background 0.3s ease'
             }}>
+                {/* Grid pattern overlay */}
                 <div style={{
                     position: 'fixed',
                     inset: 0,
-                    opacity: 0.03,
+                    opacity: colors.gridOpacity,
                     pointerEvents: 'none'
                 }}>
                     <div style={{
                         position: 'absolute',
                         inset: 0,
-                        backgroundImage: 'linear-gradient(rgba(59, 130, 246, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.5) 1px, transparent 1px)',
+                        backgroundImage: `linear-gradient(${colors.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${colors.gridColor} 1px, transparent 1px)`,
                         backgroundSize: '64px 64px'
+                    }} />
+                </div>
+                
+                {/* Decorative gradient blurs */}
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    overflow: 'hidden'
+                }}>
+                    {/* Top-left gradient blob */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-20%',
+                        left: '-10%',
+                        width: '50%',
+                        height: '50%',
+                        background: isDark 
+                            ? 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
+                            : 'radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%)',
+                        filter: 'blur(60px)',
+                        borderRadius: '50%'
+                    }} />
+                    
+                    {/* Bottom-right gradient blob */}
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '-20%',
+                        right: '-10%',
+                        width: '50%',
+                        height: '50%',
+                        background: isDark 
+                            ? 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)'
+                            : 'radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%)',
+                        filter: 'blur(60px)',
+                        borderRadius: '50%'
+                    }} />
+                    
+                    {/* Center accent */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '30%',
+                        right: '20%',
+                        width: '30%',
+                        height: '30%',
+                        background: isDark 
+                            ? 'radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%)'
+                            : 'radial-gradient(circle, rgba(147, 51, 234, 0.06) 0%, transparent 70%)',
+                        filter: 'blur(80px)',
+                        borderRadius: '50%'
                     }} />
                 </div>
 
@@ -191,21 +288,21 @@ function App() {
                                     alignItems: 'center',
                                     gap: '10px',
                                     padding: '10px 32px',
-                                    background: 'rgba(59, 130, 246, 0.1)',
-                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    background: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+                                    border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
                                     borderRadius: '9999px',
                                     marginBottom: '20px'
                                 }}>
                                     <div className="animate-pulse" style={{
                                         width: '8px',
                                         height: '8px',
-                                        background: 'rgb(59, 130, 246)',
+                                        background: colors.accent,
                                         borderRadius: '50%'
                                     }}></div>
                                     <span style={{
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: 'rgb(96, 165, 250)',
+                                        color: colors.accentLight,
                                         letterSpacing: '0.05em',
                                         whiteSpace: 'nowrap'
                                     }}>
@@ -215,93 +312,143 @@ function App() {
                                 <h1 style={{
                                     fontSize: '60px',
                                     fontWeight: 'bold',
-                                    color: 'white',
+                                    color: colors.textPrimary,
                                     marginBottom: '16px',
-                                    letterSpacing: '-0.025em'
+                                    letterSpacing: '-0.025em',
+                                    transition: 'color 0.3s ease'
                                 }}>
                                     Checkstyle Analyzer
                                 </h1>
                                 <p style={{
                                     fontSize: '20px',
-                                    color: 'rgb(148, 163, 184)',
+                                    color: colors.textSecondary,
                                     maxWidth: '768px',
-                                    lineHeight: '1.6'
+                                    lineHeight: '1.6',
+                                    transition: 'color 0.3s ease'
                                 }}>
                                     Професійний аналіз якості Java-коду за допомогою Checkstyle
                                 </p>
                             </div>
                             
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsConfigModalOpen(true);
-                                }}
-                                type="button"
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '16px 24px',
-                                    background: 'rgba(255, 255, 255, 0.02)',
-                                    backdropFilter: 'blur(40px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                                    borderRadius: '1rem',
-                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    flexShrink: 0
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-                                    e.currentTarget.style.transform = 'scale(1.02)';
-                                    const icon = e.currentTarget.querySelector('svg');
-                                    if (icon) {
-                                        (icon as SVGSVGElement).style.color = 'rgb(96, 165, 250)';
-                                        (icon as SVGSVGElement).style.transform = 'rotate(90deg)';
-                                    }
-                                    const span = e.currentTarget.querySelector('span');
-                                    if (span) {
-                                        (span as HTMLElement).style.color = 'rgb(147, 197, 253)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    const icon = e.currentTarget.querySelector('svg');
-                                    if (icon) {
-                                        (icon as SVGSVGElement).style.color = 'rgb(148, 163, 184)';
-                                        (icon as SVGSVGElement).style.transform = 'rotate(0deg)';
-                                    }
-                                    const span = e.currentTarget.querySelector('span');
-                                    if (span) {
-                                        (span as HTMLElement).style.color = 'white';
-                                    }
-                                }}
-                                onMouseDown={(e) => {
-                                    e.currentTarget.style.transform = 'scale(0.98)';
-                                }}
-                                onMouseUp={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1.02)';
-                                }}
-                            >
-                                <Settings style={{ 
-                                    width: '24px', 
-                                    height: '24px', 
-                                    color: 'rgb(148, 163, 184)',
-                                    transition: 'all 0.3s'
-                                }} />
-                                <span style={{ 
-                                    fontSize: '18px', 
-                                    fontWeight: '600', 
-                                    color: 'white',
-                                    transition: 'all 0.2s'
-                                }}>
-                                    Налаштування
-                                </span>
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {/* Theme toggle button */}
+                                <ThemeToggle />
+                                
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsConfigModalOpen(true);
+                                    }}
+                                    type="button"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '16px 24px',
+                                        background: colors.bgCard,
+                                        backdropFilter: 'blur(40px)',
+                                        border: `1px solid ${colors.borderPrimary}`,
+                                        borderRadius: '1rem',
+                                        boxShadow: isDark 
+                                            ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                                            : '0 10px 25px rgba(0, 0, 0, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        flexShrink: 0
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = colors.bgCardHover;
+                                        e.currentTarget.style.borderColor = colors.borderAccent;
+                                        e.currentTarget.style.transform = 'scale(1.02)';
+                                        const icon = e.currentTarget.querySelector('svg');
+                                        if (icon) {
+                                            (icon as SVGSVGElement).style.color = colors.accentLight;
+                                            (icon as SVGSVGElement).style.transform = 'rotate(90deg)';
+                                        }
+                                        const span = e.currentTarget.querySelector('span');
+                                        if (span) {
+                                            (span as HTMLElement).style.color = colors.accentLighter;
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = colors.bgCard;
+                                        e.currentTarget.style.borderColor = colors.borderPrimary;
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        const icon = e.currentTarget.querySelector('svg');
+                                        if (icon) {
+                                            (icon as SVGSVGElement).style.color = colors.textSecondary;
+                                            (icon as SVGSVGElement).style.transform = 'rotate(0deg)';
+                                        }
+                                        const span = e.currentTarget.querySelector('span');
+                                        if (span) {
+                                            (span as HTMLElement).style.color = colors.textPrimary;
+                                        }
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.currentTarget.style.transform = 'scale(0.98)';
+                                    }}
+                                    onMouseUp={(e) => {
+                                        e.currentTarget.style.transform = 'scale(1.02)';
+                                    }}
+                                >
+                                    <Settings style={{ 
+                                        width: '24px', 
+                                        height: '24px', 
+                                        color: colors.textSecondary,
+                                        transition: 'all 0.3s'
+                                    }} />
+                                    <span style={{ 
+                                        fontSize: '18px', 
+                                        fontWeight: '600', 
+                                        color: colors.textPrimary,
+                                        transition: 'all 0.2s'
+                                    }}>
+                                        Налаштування
+                                    </span>
+                                </button>
+                                
+                                {/* Auth section */}
+                                {isAuthenticated ? (
+                                    <UserMenu 
+                                        onShowHistory={() => setIsHistoryModalOpen(true)}
+                                    />
+                                ) : (
+                                    <button
+                                        onClick={() => openAuthModal('login')}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            padding: '16px 24px',
+                                            background: 'linear-gradient(135deg, rgb(59, 130, 246), rgb(37, 99, 235))',
+                                            border: 'none',
+                                            borderRadius: '1rem',
+                                            boxShadow: '0 10px 20px rgba(59, 130, 246, 0.2)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            flexShrink: 0
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 15px 30px rgba(59, 130, 246, 0.3)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 130, 246, 0.2)';
+                                        }}
+                                    >
+                                        <LogIn style={{ width: '20px', height: '20px', color: 'white' }} />
+                                        <span style={{ 
+                                            fontSize: '16px', 
+                                            fontWeight: '600', 
+                                            color: 'white'
+                                        }}>
+                                            Увійти
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </header>
 
@@ -318,9 +465,9 @@ function App() {
                             <div style={{
                                 marginTop: '20px',
                                 padding: '16px 24px',
-                                background: 'rgba(59, 130, 246, 0.1)',
+                                background: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
                                 backdropFilter: 'blur(40px)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
                                 borderRadius: '1rem',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -330,14 +477,14 @@ function App() {
                                 <div className="animate-pulse" style={{
                                     width: '12px',
                                     height: '12px',
-                                    background: 'rgb(59, 130, 246)',
+                                    background: colors.accent,
                                     borderRadius: '50%',
-                                    boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)'
+                                    boxShadow: `0 0 10px ${isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.3)'}`
                                 }}></div>
                                 <span style={{
                                     fontSize: '16px',
                                     fontWeight: '600',
-                                    color: 'rgb(147, 197, 253)'
+                                    color: colors.accentLighter
                                 }}>
                                     {getStatusMessage(analysisStatus)}
                                 </span>
@@ -351,20 +498,22 @@ function App() {
                         gap: '32px'
                     }}>
                         <section style={{
-                            background: 'rgba(255, 255, 255, 0.02)',
+                            background: colors.bgCard,
                             backdropFilter: 'blur(40px)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            border: `1px solid ${colors.borderPrimary}`,
                             borderRadius: '1rem',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                            boxShadow: isDark 
+                                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                                : '0 10px 25px rgba(0, 0, 0, 0.08)',
                             overflow: 'hidden',
                             animation: 'fadeIn 0.3s ease-out',
                             animationDelay: '0.2s',
                             animationFillMode: 'both',
-                            transition: 'all 0.5s'
+                            transition: 'all 0.3s ease'
                         }}>
                             <div style={{
                                 padding: '24px 32px',
-                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                                borderBottom: `1px solid ${colors.borderPrimary}`
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{
@@ -373,7 +522,7 @@ function App() {
                                         background: 'linear-gradient(to bottom, rgb(59, 130, 246), rgb(6, 182, 212))',
                                         borderRadius: '9999px'
                                     }}></div>
-                                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>
+                                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: colors.textPrimary }}>
                                         Лог-повідомлення
                                     </h2>
                                 </div>
@@ -388,20 +537,22 @@ function App() {
                         </section>
 
                         <section style={{
-                            background: 'rgba(255, 255, 255, 0.02)',
+                            background: colors.bgCard,
                             backdropFilter: 'blur(40px)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            border: `1px solid ${colors.borderPrimary}`,
                             borderRadius: '1rem',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                            boxShadow: isDark 
+                                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                                : '0 10px 25px rgba(0, 0, 0, 0.08)',
                             overflow: 'hidden',
                             animation: 'fadeIn 0.3s ease-out',
                             animationDelay: '0.3s',
                             animationFillMode: 'both',
-                            transition: 'all 0.5s'
+                            transition: 'all 0.3s ease'
                         }}>
                             <div style={{
                                 padding: '24px 32px',
-                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                borderBottom: `1px solid ${colors.borderPrimary}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between'
@@ -413,7 +564,7 @@ function App() {
                                         background: 'linear-gradient(to bottom, rgb(59, 130, 246), rgb(6, 182, 212))',
                                         borderRadius: '9999px'
                                     }}></div>
-                                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>
+                                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: colors.textPrimary }}>
                                         Результати
                                     </h2>
                                 </div>
@@ -424,19 +575,19 @@ function App() {
                                         gap: '12px',
                                         padding: '10px 24px',
                                         borderRadius: '12px',
-                                        background: 'rgba(251, 191, 36, 0.1)',
-                                        border: '1px solid rgba(251, 191, 36, 0.2)'
+                                        background: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                        border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(234, 179, 8, 0.25)'}`
                                     }}>
                                         <div className="animate-pulse" style={{
                                             width: '10px',
                                             height: '10px',
-                                            background: 'rgb(251, 191, 36)',
+                                            background: colors.warning,
                                             borderRadius: '50%'
                                         }}></div>
                                         <span style={{
                                             fontSize: '16px',
                                             fontWeight: 'bold',
-                                            color: 'rgb(251, 191, 36)',
+                                            color: colors.warning,
                                             whiteSpace: 'nowrap'
                                         }}>
                                             {results.length} {results.length === 1 ? 'порушення' : 'порушень'}
@@ -458,6 +609,18 @@ function App() {
                 <ConfigurationModal 
                     isOpen={isConfigModalOpen} 
                     onClose={() => setIsConfigModalOpen(false)} 
+                />
+                
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                    initialTab={authModalTab}
+                />
+
+                <HistoryModal
+                    isOpen={isHistoryModalOpen}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                    onViewResults={loadHistoryResults}
                 />
             </div>
         </>

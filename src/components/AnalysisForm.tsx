@@ -7,6 +7,7 @@
 
 import React, {useState} from 'react';
 import {CheckCircle, Github, Loader2} from 'lucide-react';
+import { useTheme, getThemeColors } from '../context/ThemeContext';
 
 /**
  * Props for the AnalysisForm component
@@ -30,6 +31,10 @@ interface AnalysisFormProps {
 export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit}) => {
     /** Current repository URL input value */
     const [repoUrl, setRepoUrl] = useState('');
+    
+    /** Theme context */
+    const { isDark } = useTheme();
+    const colors = getThemeColors(isDark);
 
     /**
      * Handle form submission
@@ -43,17 +48,20 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit
 
     return (
         <form onSubmit={handleSubmit} style={{
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: colors.bgCard,
             backdropFilter: 'blur(40px)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${colors.borderPrimary}`,
             borderRadius: '1rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            padding: '32px'
+            boxShadow: isDark 
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                : '0 10px 25px rgba(0, 0, 0, 0.08)',
+            padding: '32px',
+            transition: 'all 0.3s ease'
         }}>
             <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'}}>
-                    <Github style={{width: '24px', height: '24px', color: 'rgb(96, 165, 250)'}}/>
-                    <label style={{fontSize: '18px', fontWeight: '600', color: 'white'}}>
+                    <Github style={{width: '24px', height: '24px', color: colors.accentLight}}/>
+                    <label style={{fontSize: '18px', fontWeight: '600', color: colors.textPrimary}}>
                         GitHub Repository URL
                     </label>
                 </div>
@@ -73,21 +81,21 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit
                             flex: 3,
                             padding: '24px 32px',
                             fontSize: '20px',
-                            background: 'rgba(255, 255, 255, 0.03)',
-                            border: '2px solid rgba(255, 255, 255, 0.1)',
+                            background: colors.bgInput,
+                            border: `2px solid ${colors.borderSecondary}`,
                             borderRadius: '1rem',
-                            color: 'white',
+                            color: colors.textPrimary,
                             outline: 'none',
                             transition: 'all 0.2s',
                             opacity: isAnalyzing ? 0.5 : 1,
                             cursor: isAnalyzing ? 'not-allowed' : 'text'
                         }}
                         onFocus={(e) => {
-                            e.target.style.borderColor = 'rgb(59, 130, 246)';
-                            e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.2)';
+                            e.target.style.borderColor = colors.accent;
+                            e.target.style.boxShadow = `0 0 0 4px ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`;
                         }}
                         onBlur={(e) => {
-                            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                            e.target.style.borderColor = colors.borderSecondary;
                             e.target.style.boxShadow = 'none';
                         }}
                     />
@@ -103,7 +111,9 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit
                             border: 'none',
                             borderRadius: '1rem',
                             color: 'white',
-                            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.25)',
+                            boxShadow: isDark 
+                                ? '0 20px 25px -5px rgba(59, 130, 246, 0.25)'
+                                : '0 10px 20px rgba(59, 130, 246, 0.2)',
                             cursor: (isAnalyzing || !repoUrl.trim()) ? 'not-allowed' : 'pointer',
                             opacity: (isAnalyzing || !repoUrl.trim()) ? 0.5 : 1,
                             display: 'flex',
@@ -138,7 +148,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit
 
                 <p style={{
                     fontSize: '14px',
-                    color: 'rgb(100, 116, 139)',
+                    color: colors.textMuted,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
@@ -146,7 +156,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({isAnalyzing, onSubmit
                     <span style={{
                         width: '6px',
                         height: '6px',
-                        background: 'rgb(100, 116, 139)',
+                        background: colors.textMuted,
                         borderRadius: '50%'
                     }}></span>
                     Підтримуються тільки публічні Java репозиторії

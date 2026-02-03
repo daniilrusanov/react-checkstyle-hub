@@ -5,8 +5,11 @@
  * analysis backend. It handles starting code analysis and fetching results.
  */
 
-/** Base URL for the backend API server */
-export const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { BACKEND_URL } from '../config';
+import { getAuthHeaders } from './auth';
+
+// Re-export BACKEND_URL for backwards compatibility
+export { BACKEND_URL };
 
 /**
  * Request body structure for starting a new analysis
@@ -33,11 +36,17 @@ export interface AnalysisRequestBody {
 export const startAnalysis = async (repoUrl: string): Promise<string> => {
     const response = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+        },
         body: JSON.stringify({repoUrl} as AnalysisRequestBody),
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Будь ласка, увійдіть в систему для запуску аналізу');
+        }
         const errorText = await response.text();
         throw new Error(`Помилка серверу: ${response.status} ${response.statusText}. ${errorText}`);
     }
