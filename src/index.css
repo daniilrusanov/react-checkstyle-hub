@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+    /* Global box-sizing reset */
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
     /* Dark theme (default) */
     :root,
     [data-theme="dark"] {
@@ -24,6 +29,12 @@
         --scrollbar-track: rgba(0, 0, 0, 0.05);
         --scrollbar-thumb: rgba(59, 130, 246, 0.5);
         --scrollbar-thumb-hover: rgba(59, 130, 246, 0.7);
+    }
+
+    html {
+        /* Prevent layout shift when modal opens/scrollbar appears */
+        overflow-y: scroll;
+        scrollbar-gutter: stable;
     }
 
     body {

@@ -118,10 +118,10 @@ export const themeColors = {
         textSecondary: 'rgb(71, 85, 105)',
         textMuted: 'rgb(100, 116, 139)',
         
-        // Borders
-        borderPrimary: 'rgba(0, 0, 0, 0.08)',
-        borderSecondary: 'rgba(0, 0, 0, 0.12)',
-        borderAccent: 'rgba(59, 130, 246, 0.4)',
+        // Borders - increased visibility to match dark theme
+        borderPrimary: 'rgba(0, 0, 0, 0.12)',
+        borderSecondary: 'rgba(0, 0, 0, 0.18)',
+        borderAccent: 'rgba(59, 130, 246, 0.5)',
         
         // Accents
         accent: 'rgb(37, 99, 235)',

@@ -5,8 +5,10 @@
  * It handles fetching and updating code quality rules for Java analysis.
  */
 
+import { BACKEND_URL } from '../config';
+
 /** Base URL for Checkstyle configuration API endpoints */
-const API_BASE_URL = 'http://localhost:8000/api/checkstyle';
+const API_BASE_URL = `${BACKEND_URL}/api/checkstyle`;
 
 /**
  * Complete Checkstyle configuration interface

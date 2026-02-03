@@ -94,6 +94,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
 
     const inputStyle: React.CSSProperties = {
         width: '100%',
+        boxSizing: 'border-box',
         padding: '14px 16px 14px 48px',
         background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
         border: `1px solid ${colors.borderSecondary}`,
@@ -106,6 +107,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
 
     const buttonStyle: React.CSSProperties = {
         width: '100%',
+        boxSizing: 'border-box',
         padding: '16px',
         background: 'linear-gradient(135deg, rgb(59, 130, 246), rgb(37, 99, 235))',
         border: 'none',
