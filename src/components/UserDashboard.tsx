@@ -87,6 +87,18 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
     const colors = getThemeColors(isDark);
     const { isAuthenticated } = useAuth();
 
+    // Disable body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.documentElement.classList.add('modal-open');
+        } else {
+            document.documentElement.classList.remove('modal-open');
+        }
+        return () => {
+            document.documentElement.classList.remove('modal-open');
+        };
+    }, [isOpen]);
+
     // Load data when dashboard opens
     useEffect(() => {
         if (isOpen && isAuthenticated) {
@@ -423,7 +435,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                         />
                                         <StatCard
                                             icon={FolderGit2}
-                                            label="Репозиторіїв"
+                                            label="Репозиторії"
                                             value={statistics?.uniqueRepositories || 0}
                                             color={isDark ? 'rgb(168, 85, 247)' : 'rgb(147, 51, 234)'}
                                             isDark={isDark}
@@ -442,29 +454,33 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                             padding: '24px',
                                             background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
                                             border: `1px solid ${colors.borderPrimary}`,
-                                            borderRadius: '16px'
+                                            borderRadius: '16px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            textAlign: 'center'
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    background: `${colors.success}20`,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <Target style={{ width: '20px', height: '20px', color: colors.success }} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '14px', color: colors.textSecondary }}>Успішність</div>
-                                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.textPrimary }}>
-                                                        {getSuccessRate()}%
-                                                    </div>
-                                                </div>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '10px',
+                                                background: `${colors.success}20`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                marginBottom: '12px'
+                                            }}>
+                                                <Target style={{ width: '20px', height: '20px', color: colors.success }} />
+                                            </div>
+                                            <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '8px' }}>
+                                                Успішність
+                                            </div>
+                                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '16px' }}>
+                                                {getSuccessRate()}%
                                             </div>
                                             {/* Progress Bar */}
                                             <div style={{
+                                                width: '100%',
                                                 height: '8px',
                                                 background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
                                                 borderRadius: '4px',
@@ -481,9 +497,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                             <div style={{ 
                                                 fontSize: '12px', 
                                                 color: colors.textMuted, 
-                                                marginTop: '8px',
+                                                marginTop: '12px',
                                                 display: 'flex',
-                                                justifyContent: 'space-between'
+                                                justifyContent: 'space-between',
+                                                width: '100%'
                                             }}>
                                                 <span>{statistics?.completedAnalyses || 0} успішних</span>
                                                 <span>{statistics?.failedAnalyses || 0} невдалих</span>
@@ -495,30 +512,34 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                             padding: '24px',
                                             background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
                                             border: `1px solid ${colors.borderPrimary}`,
-                                            borderRadius: '16px'
+                                            borderRadius: '16px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            textAlign: 'center'
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    background: `${colors.warning}20`,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <Zap style={{ width: '20px', height: '20px', color: colors.warning }} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '14px', color: colors.textSecondary }}>Середнє порушень</div>
-                                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.textPrimary }}>
-                                                        {getAvgViolationsPerAnalysis()}
-                                                    </div>
-                                                </div>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '10px',
+                                                background: `${colors.warning}20`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                marginBottom: '12px'
+                                            }}>
+                                                <Zap style={{ width: '20px', height: '20px', color: colors.warning }} />
+                                            </div>
+                                            <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '8px' }}>
+                                                Середнє порушень
+                                            </div>
+                                            <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '16px' }}>
+                                                {getAvgViolationsPerAnalysis()}
                                             </div>
                                             <div style={{ 
                                                 display: 'flex', 
-                                                alignItems: 'center', 
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
                                                 gap: '8px',
                                                 fontSize: '13px'
                                             }}>
@@ -547,45 +568,49 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                 padding: '24px',
                                                 background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
                                                 border: `1px solid ${colors.borderPrimary}`,
-                                                borderRadius: '16px'
+                                                borderRadius: '16px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                textAlign: 'center'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '10px',
-                                                        background: `${colors.accent}20`,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <Clock style={{ width: '20px', height: '20px', color: colors.accent }} />
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '14px', color: colors.textSecondary }}>Останній аналіз</div>
-                                                        <div style={{ fontSize: '14px', fontWeight: '600', color: colors.textPrimary }}>
-                                                            {formatDate(history[0].createdAt)}
-                                                        </div>
-                                                    </div>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    background: `${colors.accent}20`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    <Clock style={{ width: '20px', height: '20px', color: colors.accent }} />
+                                                </div>
+                                                <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '8px' }}>
+                                                    Останній аналіз
+                                                </div>
+                                                <div style={{ fontSize: '18px', fontWeight: '600', color: colors.textPrimary, marginBottom: '12px' }}>
+                                                    {formatDate(history[0].createdAt)}
                                                 </div>
                                                 <div style={{
                                                     fontSize: '13px',
                                                     color: colors.textSecondary,
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
+                                                    whiteSpace: 'nowrap',
+                                                    maxWidth: '100%'
                                                 }}>
                                                     {extractRepoName(history[0].repoUrl)}
                                                 </div>
                                                 {history[0].violationsCount !== null && (
                                                     <div style={{
-                                                        marginTop: '8px',
-                                                        padding: '4px 8px',
+                                                        marginTop: '12px',
+                                                        padding: '6px 12px',
                                                         background: `${colors.warning}15`,
-                                                        borderRadius: '4px',
+                                                        borderRadius: '6px',
                                                         fontSize: '12px',
                                                         color: colors.warning,
-                                                        display: 'inline-block'
+                                                        fontWeight: '500'
                                                     }}>
                                                         {history[0].violationsCount} порушень
                                                     </div>
@@ -608,7 +633,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                 border: `1px solid ${colors.borderPrimary}`,
                                                 borderRadius: '16px'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
                                                     <Calendar style={{ width: '18px', height: '18px', color: colors.accent }} />
                                                     <h3 style={{ 
                                                         fontSize: '16px', 
@@ -619,7 +644,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                         Активність за тиждень
                                                     </h3>
                                                 </div>
-                                                <ResponsiveContainer width="100%" height={180}>
+                                                <ResponsiveContainer width="100%" height={200}>
                                                     <AreaChart data={getAnalysisOverTimeData()}>
                                                         <defs>
                                                             <linearGradient id="colorAnalyses" x1="0" y1="0" x2="0" y2="1">
@@ -666,7 +691,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                 border: `1px solid ${colors.borderPrimary}`,
                                                 borderRadius: '16px'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
                                                     <AlertTriangle style={{ width: '18px', height: '18px', color: colors.warning }} />
                                                     <h3 style={{ 
                                                         fontSize: '16px', 
@@ -677,7 +702,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                         Порушення за тиждень
                                                     </h3>
                                                 </div>
-                                                <ResponsiveContainer width="100%" height={180}>
+                                                <ResponsiveContainer width="100%" height={200}>
                                                     <BarChart data={getViolationsOverTimeData()}>
                                                         <CartesianGrid strokeDasharray="3 3" stroke={colors.borderPrimary} />
                                                         <XAxis 
@@ -725,7 +750,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                 border: `1px solid ${colors.borderPrimary}`,
                                                 borderRadius: '16px'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
                                                     <History style={{ width: '18px', height: '18px', color: colors.accentLight }} />
                                                     <h3 style={{ 
                                                         fontSize: '16px', 
@@ -800,7 +825,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                     border: `1px solid ${colors.borderPrimary}`,
                                                     borderRadius: '16px'
                                                 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
                                                         <Award style={{ width: '18px', height: '18px', color: isDark ? 'rgb(168, 85, 247)' : 'rgb(147, 51, 234)' }} />
                                                         <h3 style={{ 
                                                             fontSize: '16px', 
@@ -874,7 +899,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                     border: `1px solid ${colors.borderPrimary}`,
                                                     borderRadius: '16px'
                                                 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
                                                         <CheckCircle style={{ width: '18px', height: '18px', color: colors.success }} />
                                                         <h3 style={{ 
                                                             fontSize: '16px', 
@@ -1171,24 +1196,37 @@ const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value, color, is
         background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
         border: `1px solid ${colors.borderPrimary}`,
         borderRadius: '12px',
-        transition: 'all 0.2s'
+        transition: 'all 0.2s',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        minHeight: '160px'
     }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: `${color}20`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}>
-                <Icon style={{ width: '20px', height: '20px', color }} />
-            </div>
+        {/* Icon at top */}
+        <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: `${color}20`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}>
+            <Icon style={{ width: '20px', height: '20px', color }} />
         </div>
-        <div style={{ fontSize: '28px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '4px' }}>
+        {/* Value centered vertically */}
+        <div style={{ 
+            fontSize: '32px', 
+            fontWeight: 'bold', 
+            color: colors.textPrimary,
+            marginTop: 'auto',
+            marginBottom: 'auto',
+            lineHeight: 1
+        }}>
             {value.toLocaleString()}
         </div>
+        {/* Label at bottom */}
         <div style={{ fontSize: '13px', color: colors.textSecondary }}>
             {label}
         </div>

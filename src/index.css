@@ -37,6 +37,11 @@
         scrollbar-gutter: stable;
     }
 
+    html.modal-open,
+    html.modal-open body {
+        overflow: hidden !important;
+    }
+
     body {
         background-color: var(--bg-primary);
         color: var(--text-primary);

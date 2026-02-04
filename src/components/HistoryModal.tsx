@@ -23,6 +23,18 @@ export const HistoryModal = ({ isOpen, onClose, onViewResults }: HistoryModalPro
     const { isDark } = useTheme();
     const colors = getThemeColors(isDark);
 
+    // Disable body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.documentElement.classList.add('modal-open');
+        } else {
+            document.documentElement.classList.remove('modal-open');
+        }
+        return () => {
+            document.documentElement.classList.remove('modal-open');
+        };
+    }, [isOpen]);
+
     useEffect(() => {
         if (isOpen) {
             loadData();

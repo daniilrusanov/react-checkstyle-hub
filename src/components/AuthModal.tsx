@@ -4,7 +4,7 @@
  * Combined login/register modal with tab switching.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, User, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, getThemeColors } from '../context/ThemeContext';
@@ -33,6 +33,18 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     const { login, register } = useAuth();
     const { isDark } = useTheme();
     const colors = getThemeColors(isDark);
+
+    // Disable body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.documentElement.classList.add('modal-open');
+        } else {
+            document.documentElement.classList.remove('modal-open');
+        }
+        return () => {
+            document.documentElement.classList.remove('modal-open');
+        };
+    }, [isOpen]);
 
     if (!isOpen) return null;
 

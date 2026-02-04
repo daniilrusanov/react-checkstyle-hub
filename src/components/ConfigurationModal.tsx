@@ -54,6 +54,20 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
     const colors = getThemeColors(isDark);
 
     /**
+     * Disable body scroll when modal is open
+     */
+    useEffect(() => {
+        if (isOpen) {
+            document.documentElement.classList.add('modal-open');
+        } else {
+            document.documentElement.classList.remove('modal-open');
+        }
+        return () => {
+            document.documentElement.classList.remove('modal-open');
+        };
+    }, [isOpen]);
+
+    /**
      * Load configuration when modal opens or auth state changes
      */
     useEffect(() => {
@@ -320,69 +334,63 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
             >
                 {/* Header - Fixed */}
                 <div style={{
-                    padding: '32px',
-                    borderBottom: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
-                    background: isDark 
-                        ? 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1))'
-                        : 'linear-gradient(to right, rgba(59, 130, 246, 0.08), rgba(6, 182, 212, 0.08))'
+                    padding: '24px 32px',
+                    borderBottom: `1px solid ${colors.borderPrimary}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{
-                                width: '56px',
-                                height: '56px',
-                                borderRadius: '12px',
-                                background: isDark 
-                                    ? 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))'
-                                    : 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.15))',
-                                border: `2px solid ${colors.borderAccent}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                <Settings2 style={{ width: '28px', height: '28px', color: colors.accentLight }} />
-                            </div>
-                            <div>
-                                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: colors.textPrimary, marginBottom: '4px' }}>
-                                    Налаштування Checkstyle
-                                </h2>
-                                <p style={{ fontSize: '14px', color: colors.textSecondary }}>
-                                    Керуйте правилами аналізу коду
-                                </p>
-                            </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: `linear-gradient(135deg, ${colors.accent}, ${isDark ? 'rgb(6, 182, 212)' : 'rgb(14, 165, 233)'})`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Settings2 style={{ width: '24px', height: '24px', color: 'white' }} />
                         </div>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                width: '40px',
-                                height: '40px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                                border: `1px solid ${colors.borderSecondary}`,
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = isDark 
-                                    ? 'rgba(239, 68, 68, 0.2)'
-                                    : 'rgba(220, 38, 38, 0.1)';
-                                e.currentTarget.style.borderColor = isDark 
-                                    ? 'rgba(239, 68, 68, 0.5)'
-                                    : 'rgba(220, 38, 38, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = isDark 
-                                    ? 'rgba(255, 255, 255, 0.05)'
-                                    : 'rgba(0, 0, 0, 0.05)';
-                                e.currentTarget.style.borderColor = colors.borderSecondary;
-                            }}
-                        >
-                            <X style={{ width: '20px', height: '20px', color: colors.error }} />
-                        </button>
+                        <div>
+                            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: colors.textPrimary, margin: 0 }}>
+                                Налаштування Checkstyle
+                            </h2>
+                            <p style={{ fontSize: '14px', color: colors.textSecondary, margin: 0 }}>
+                                Керуйте правилами аналізу коду
+                            </p>
+                        </div>
                     </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                            border: `1px solid ${colors.borderSecondary}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isDark 
+                                ? 'rgba(239, 68, 68, 0.2)'
+                                : 'rgba(220, 38, 38, 0.1)';
+                            e.currentTarget.style.borderColor = isDark 
+                                ? 'rgba(239, 68, 68, 0.5)'
+                                : 'rgba(220, 38, 38, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isDark 
+                                ? 'rgba(255, 255, 255, 0.05)'
+                                : 'rgba(0, 0, 0, 0.05)';
+                            e.currentTarget.style.borderColor = colors.borderSecondary;
+                        }}
+                    >
+                        <X style={{ width: '20px', height: '20px', color: colors.error }} />
+                    </button>
                 </div>
 
                 {/* Content - Scrollable */}
@@ -407,25 +415,19 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             {/* Info Box */}
                             <div style={{
-                                padding: '20px',
+                                padding: '12px 16px',
                                 background: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
                                 border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
-                                borderRadius: '12px'
+                                borderRadius: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                flexWrap: 'wrap'
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                                    <div style={{
-                                        width: '8px',
-                                        height: '8px',
-                                        borderRadius: '50%',
-                                        background: colors.accentLight
-                                    }}></div>
-                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: colors.accentLight }}>
-                                        Конфігурація: {config.configName}
-                                    </span>
-                                </div>
-                                <p style={{ fontSize: '14px', color: colors.textSecondary, marginLeft: '20px' }}>
+                                <span style={{ fontSize: '13px', color: colors.textSecondary }}>
                                     Оновлено: {new Date(config.updatedAt).toLocaleString('uk-UA')}
-                                </p>
+                                </span>
                             </div>
 
                             {/* Quick Actions */}
@@ -504,23 +506,31 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                 gap: '16px'
                             }}>
                                 <div style={{
-                                    padding: '16px',
+                                    padding: '20px 16px',
                                     background: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(22, 163, 74, 0.08)',
                                     border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(22, 163, 74, 0.2)'}`,
-                                    borderRadius: '12px'
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    textAlign: 'center'
                                 }}>
-                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.success, marginBottom: '4px' }}>
+                                    <div style={{ fontSize: '36px', fontWeight: 'bold', color: colors.success, marginBottom: '6px', lineHeight: 1 }}>
                                         {getEnabledRulesCount()}
                                     </div>
                                     <div style={{ fontSize: '14px', color: colors.textSecondary }}>Активних правил</div>
                                 </div>
                                 <div style={{
-                                    padding: '16px',
+                                    padding: '20px 16px',
                                     background: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(202, 138, 4, 0.08)',
                                     border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(202, 138, 4, 0.2)'}`,
-                                    borderRadius: '12px'
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    textAlign: 'center'
                                 }}>
-                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.warning, marginBottom: '4px' }}>
+                                    <div style={{ fontSize: '36px', fontWeight: 'bold', color: colors.warning, marginBottom: '6px', lineHeight: 1 }}>
                                         {config.lineLength}
                                     </div>
                                     <div style={{ fontSize: '14px', color: colors.textSecondary }}>Символів у рядку</div>
@@ -714,14 +724,16 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                 const isEnabled = config[ruleKey as keyof CheckstyleConfig] as boolean;
 
                                                 return (
-                                                    <div
+                                                    <label
                                                         key={ruleKey}
                                                         style={{
-                                                            padding: '16px',
+                                                            padding: '14px 16px',
                                                             background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
                                                             border: `1px solid ${colors.borderPrimary}`,
                                                             borderRadius: '8px',
-                                                            transition: 'all 0.2s'
+                                                            transition: 'all 0.2s',
+                                                            cursor: 'pointer',
+                                                            display: 'block'
                                                         }}
                                                         onMouseEnter={(e) => {
                                                             e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
@@ -732,7 +744,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                             e.currentTarget.style.borderColor = colors.borderPrimary;
                                                         }}
                                                     >
-                                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                             <input
                                                                 type="checkbox"
                                                                 checked={isEnabled}
@@ -740,16 +752,16 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                 style={{
                                                                     width: '20px',
                                                                     height: '20px',
-                                                                    marginTop: '2px',
                                                                     cursor: 'pointer',
-                                                                    accentColor: 'rgb(59, 130, 246)'
+                                                                    accentColor: 'rgb(59, 130, 246)',
+                                                                    flexShrink: 0
                                                                 }}
                                                             />
-                                                            <div style={{ flex: 1 }}>
-                                                                <div style={{ fontSize: '15px', fontWeight: '600', color: colors.textPrimary, marginBottom: '6px' }}>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontSize: '15px', fontWeight: '600', color: colors.textPrimary }}>
                                                                     {rule.name}
                                                                 </div>
-                                                                <p style={{ fontSize: '13px', color: colors.textSecondary, lineHeight: '1.5' }}>
+                                                                <p style={{ fontSize: '13px', color: colors.textSecondary, lineHeight: '1.5', margin: '4px 0 0 0' }}>
                                                                     {rule.description}
                                                                 </p>
                                                             </div>
@@ -759,6 +771,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                 fontSize: '12px',
                                                                 fontWeight: '600',
                                                                 whiteSpace: 'nowrap',
+                                                                flexShrink: 0,
                                                                 background: isEnabled 
                                                                     ? (isDark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(22, 163, 74, 0.15)')
                                                                     : (isDark ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.15)'),
@@ -770,7 +783,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                 {isEnabled ? 'ON' : 'OFF'}
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    </label>
                                                 );
                                             })}
                                         </div>
@@ -790,11 +803,12 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                 {/* Footer - Fixed */}
                 <div style={{
                     padding: '24px 32px',
-                    borderTop: `2px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)'}`,
+                    borderTop: `1px solid ${colors.borderPrimary}`,
                     background: isDark ? 'rgba(15, 15, 25, 0.95)' : 'rgba(248, 250, 252, 0.95)',
                     display: 'flex',
                     gap: '12px',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    borderRadius: '0 0 16px 16px'
                 }}>
                     <button
                         onClick={handleReset}
