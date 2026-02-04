@@ -51,7 +51,7 @@ type TabType = 'overview' | 'history' | 'repositories';
 interface UserDashboardProps {
     isOpen: boolean;
     onClose: () => void;
-    onViewResults?: (requestId: number) => void;
+    onViewResults?: (requestId: number, repoUrl?: string) => void;
     onAnalyzeRepo?: (repoUrl: string) => void;
 }
 
@@ -775,7 +775,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                                 cursor: 'pointer',
                                                                 transition: 'all 0.2s'
                                                             }}
-                                                            onClick={() => item.status === 'COMPLETED' && onViewResults?.(item.id)}
+                                                            onClick={() => {
+                                                                if (item.status === 'COMPLETED' && onViewResults) {
+                                                                    onViewResults(item.id, item.repoUrl);
+                                                                    onClose();
+                                                                }
+                                                            }}
                                                             onMouseEnter={(e) => {
                                                                 e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
                                                             }}
@@ -988,15 +993,20 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                     justifyContent: 'space-between',
                                                     gap: '16px',
                                                     transition: 'all 0.2s',
-                                                    cursor: 'pointer'
+                                                    cursor: item.status === 'COMPLETED' ? 'pointer' : 'default'
                                                 }}
                                                 onClick={() => {
-                                                    // Close modal and set URL in form
-                                                    onAnalyzeRepo?.(item.repoUrl);
+                                                    // For completed analyses, show results; otherwise do nothing
+                                                    if (item.status === 'COMPLETED' && onViewResults) {
+                                                        onViewResults(item.id, item.repoUrl);
+                                                        onClose();
+                                                    }
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-                                                    e.currentTarget.style.borderColor = colors.borderAccent;
+                                                    if (item.status === 'COMPLETED') {
+                                                        e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+                                                        e.currentTarget.style.borderColor = colors.borderAccent;
+                                                    }
                                                 }}
                                                 onMouseLeave={(e) => {
                                                     e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)';
@@ -1104,17 +1114,22 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                         alignItems: 'center',
                                                         gap: '8px'
                                                     }}>
-                                                        <FolderGit2 style={{ width: '16px', height: '16px', color: colors.accentLight }} />
+                                                        <FolderGit2 style={{ width: '16px', height: '16px', color: colors.accentLight, flexShrink: 0 }} />
                                                         {repo.name}
                                                     </div>
-                                                    <div style={{ fontSize: '13px', color: colors.textMuted }}>
+                                                    <div style={{ fontSize: '13px', color: colors.textMuted, marginLeft: '24px' }}>
                                                         {repo.analysisCount} {repo.analysisCount === 1 ? 'аналіз' : 'аналізів'} • 
                                                         Останній: {formatDate(repo.lastAnalyzedAt)}
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
-                                                        onClick={() => onAnalyzeRepo?.(repo.repoUrl)}
+                                                        onClick={() => {
+                                                            if (onAnalyzeRepo) {
+                                                                onAnalyzeRepo(repo.repoUrl);
+                                                                onClose();
+                                                            }
+                                                        }}
                                                         style={{
                                                             display: 'flex',
                                                             alignItems: 'center',

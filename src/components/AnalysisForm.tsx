@@ -23,7 +23,7 @@ interface AnalysisFormProps {
     /** Callback invoked when a URL is submitted */
     onSubmit: (url: string) => void;
     /** Callback invoked when code is submitted directly */
-    onCodeSubmit?: (code: string, fileName?: string) => void;
+    onCodeSubmit?: (code: string, fileName?: string, checkCompilation?: boolean) => void;
     /** External URL to set (e.g., from history) - will switch to URL mode */
     externalUrl?: string;
 }
@@ -62,6 +62,8 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
     const [fileName, setFileName] = useState<string | null>(null);
     /** Whether file is being dragged over */
     const [isDragging, setIsDragging] = useState(false);
+    /** Whether to check compilation (disabled by default for code with external dependencies) */
+    const [checkCompilation, setCheckCompilation] = useState(false);
     
     /** File input ref for programmatic access */
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +84,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
             onSubmit(repoUrl);
         } else {
             if (!code.trim()) return;
-            onCodeSubmit?.(code, fileName || undefined);
+            onCodeSubmit?.(code, fileName || undefined, checkCompilation);
         }
     };
 
@@ -494,6 +496,39 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
                         </div>
                     )}
 
+                    {/* Compilation Check Option */}
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '14px 16px',
+                        background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+                        border: `1px solid ${checkCompilation ? colors.accent : colors.borderSecondary}`,
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={checkCompilation}
+                            onChange={(e) => setCheckCompilation(e.target.checked)}
+                            style={{
+                                width: '18px',
+                                height: '18px',
+                                cursor: 'pointer',
+                                accentColor: colors.accent
+                            }}
+                        />
+                        <div>
+                            <div style={{ fontSize: '14px', fontWeight: '500', color: colors.textPrimary }}>
+                                Перевіряти компіляцію
+                            </div>
+                            <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px' }}>
+                                Вимкніть для коду із зовнішніми залежностями (Spring, бібліотеки тощо)
+                            </div>
+                        </div>
+                    </label>
+
                     {/* Submit Button */}
                     <button
                         type="submit"
@@ -553,7 +588,10 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
                             background: colors.success,
                             borderRadius: '50%'
                         }}></span>
-                        Код буде перевірено на компіляцію та стиль
+                        {checkCompilation 
+                            ? 'Код буде перевірено на компіляцію та стиль'
+                            : 'Код буде перевірено тільки на стиль (Checkstyle)'
+                        }
                     </p>
                 </div>
             )}

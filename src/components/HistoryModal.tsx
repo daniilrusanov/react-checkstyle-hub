@@ -12,7 +12,7 @@ import { useTheme, getThemeColors } from '../context/ThemeContext';
 interface HistoryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onViewResults?: (requestId: number) => void;
+    onViewResults?: (requestId: number, repoUrl?: string) => void;
 }
 
 export const HistoryModal = ({ isOpen, onClose, onViewResults }: HistoryModalProps) => {
@@ -271,7 +271,7 @@ export const HistoryModal = ({ isOpen, onClose, onViewResults }: HistoryModalPro
                                         }}
                                         onClick={() => {
                                             if (item.status === 'COMPLETED' && onViewResults) {
-                                                onViewResults(item.id);
+                                                onViewResults(item.id, item.repoUrl);
                                                 onClose();
                                             }
                                         }}

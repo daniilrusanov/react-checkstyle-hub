@@ -77,11 +77,18 @@ function App() {
     /**
      * Load results from a previous analysis
      */
-    const loadHistoryResults = async (requestId: number) => {
+    const loadHistoryResults = async (requestId: number, repoUrl?: string) => {
         try {
             const results = await fetchResults(String(requestId));
             setResults(results);
             setLogs([{ level: 'INFO', message: `Завантажено ${results.length} результатів з історії` }]);
+            
+            // Set the repo URL in the form and switch to URL mode
+            if (repoUrl) {
+                setExternalRepoUrl(repoUrl);
+                // Clear after a tick to allow re-setting the same URL later
+                setTimeout(() => setExternalRepoUrl(undefined), 100);
+            }
         } catch (error) {
             console.error('Failed to load results:', error);
         }
@@ -183,8 +190,9 @@ function App() {
      * 
      * @param code - Java source code to analyze
      * @param fileName - Optional filename for the code
+     * @param checkCompilation - Whether to check if code compiles
      */
-    const handleCodeAnalysis = async (code: string, fileName?: string) => {
+    const handleCodeAnalysis = async (code: string, fileName?: string, checkCompilation: boolean = false) => {
         if (isAnalyzing) return;
 
         setIsAnalyzing(true);
@@ -199,12 +207,14 @@ function App() {
                 setLogs(prev => [...prev, { level: 'INFO', message: `Файл: ${fileName}` }]);
             }
 
-            setLogs(prev => [...prev, { level: 'INFO', message: 'Перевірка компіляції...' }]);
+            if (checkCompilation) {
+                setLogs(prev => [...prev, { level: 'INFO', message: 'Перевірка компіляції...' }]);
+            }
 
             const result = await analyzeCode({
                 code,
                 fileName,
-                checkCompilation: true
+                checkCompilation
             });
 
             if (!result.success) {
@@ -213,19 +223,31 @@ function App() {
                 return;
             }
 
-            // Log compilation results
-            if (result.compilationSuccess !== undefined) {
+            // Log compilation results (only if checkCompilation was enabled)
+            if (checkCompilation && result.compilationSuccess !== undefined) {
                 if (result.compilationSuccess) {
                     setLogs(prev => [...prev, { level: 'INFO', message: '✅ Код успішно компілюється' }]);
                 } else {
                     setLogs(prev => [...prev, { level: 'WARNING', message: '❌ Код не компілюється' }]);
-                    for (const error of result.compilationErrors) {
+                    for (const error of result.compilationErrors || []) {
                         setLogs(prev => [...prev, { 
                             level: 'ERROR', 
                             message: `Рядок ${error.lineNumber}: ${error.message}` 
                         }]);
                     }
                 }
+            }
+
+            // If compilation check was enabled and failed, don't show Checkstyle results
+            const compilationFailed = checkCompilation && result.compilationSuccess === false;
+            
+            if (compilationFailed) {
+                setLogs(prev => [...prev, { 
+                    level: 'WARNING', 
+                    message: 'Аналіз Checkstyle пропущено через помилки компіляції' 
+                }]);
+                setAnalysisStatus('FAILED');
+                return;
             }
 
             // Log Checkstyle analysis
@@ -728,8 +750,10 @@ function App() {
                     onViewResults={loadHistoryResults}
                     onAnalyzeRepo={(repoUrl) => {
                         setIsDashboardOpen(false);
-                        // Set URL in form (will switch to URL tab automatically)
+                        // Set URL in form and start analysis
                         setExternalRepoUrl(repoUrl);
+                        // Start analysis automatically
+                        handleAnalysisStart(repoUrl);
                         // Clear after a tick to allow re-setting the same URL
                         setTimeout(() => setExternalRepoUrl(undefined), 100);
                     }}
