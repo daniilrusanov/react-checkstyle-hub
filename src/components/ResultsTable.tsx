@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import { AlertTriangle, FileCode, Loader2, MapPin, Sparkles } from 'lucide-react';
 import type { AnalysisResult } from '../services/api';
-import { getAiExplanation } from '../services/api';
+import { getAiExplanation, getStatelessAiExplanation } from '../services/api';
 import { useTheme, getThemeColors } from '../context/ThemeContext';
 
 /**
@@ -22,6 +22,11 @@ interface ResultsTableProps {
     results: AnalysisResult[];
     /** Whether an analysis is currently in progress */
     isAnalyzing: boolean;
+    /**
+     * Full Java source from direct code analysis. When set, AI uses the stateless API
+     * (no DB result id). Omit for GitHub / history flows that have persisted result ids.
+     */
+    rawCode?: string;
 }
 
 /**
@@ -609,7 +614,7 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
  * - Empty state with instructions
  * - Staggered entry animations
  */
-export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing }) => {
+export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing, rawCode }) => {
     const { isDark } = useTheme();
     const colors = getThemeColors(isDark);
 
@@ -620,6 +625,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing
 
     const handleExplainClick = async (result: AnalysisResult) => {
         const id = result.id;
+        const useStatelessAi = rawCode != null && rawCode.length > 0;
 
         // Already loaded — toggle visibility
         if (aiExplanations[id] !== undefined || aiErrors[id] !== undefined) {
@@ -632,7 +638,13 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing
         setExpandedIds(prev => ({ ...prev, [id]: true }));
 
         try {
-            const explanation = await getAiExplanation(id);
+            const explanation = useStatelessAi
+                ? await getStatelessAiExplanation({
+                    code: rawCode,
+                    message: result.message,
+                    lineNumber: result.lineNumber,
+                })
+                : await getAiExplanation(id);
             setAiExplanations(prev => ({ ...prev, [id]: explanation }));
         } catch (e) {
             setAiErrors(prev => ({

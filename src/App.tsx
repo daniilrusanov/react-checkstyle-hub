@@ -116,6 +116,9 @@ function App() {
     const [externalRepoUrl, setExternalRepoUrl] = useState<string | undefined>(undefined);
     /** Quality score (0–100) from the last completed analysis */
     const [qualityScore, setQualityScore] = useState<number | null>(null);
+    /** Source code from the last direct (paste) analysis — used for stateless AI explanations */
+    const [directAnalysisRawCode, setDirectAnalysisRawCode] = useState<string | null>(null);
+
     /** General AI summary text (FRS06) */
     const [summaryText, setSummaryText] = useState<string | null>(null);
     /** Whether the general AI summary is being fetched */
@@ -143,6 +146,7 @@ function App() {
      */
     const loadHistoryResults = async (requestId: number, repoUrl?: string) => {
         try {
+            setDirectAnalysisRawCode(null);
             const results = await fetchResults(String(requestId));
             setResults(results);
             setLogs([{ level: 'INFO', message: `Завантажено ${results.length} результатів з історії` }]);
@@ -195,6 +199,7 @@ function App() {
         setQualityScore(null);
         setSummaryText(null);
         setSummaryError(null);
+        setDirectAnalysisRawCode(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Надсилаю запит на аналіз...' }]);
@@ -273,6 +278,7 @@ function App() {
         setQualityScore(null);
         setSummaryText(null);
         setSummaryError(null);
+        setDirectAnalysisRawCode(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Починаю аналіз коду...' }]);
@@ -337,6 +343,7 @@ function App() {
             }));
 
             setResults(analysisResults);
+            setDirectAnalysisRawCode(code);
 
             // Log quality score
             if (result.qualityScore !== undefined) {
@@ -1032,7 +1039,11 @@ function App() {
                                 overflowY: results.length > 0 ? 'auto' : 'hidden',
                                 overflowX: 'hidden'
                             }}>
-                                <ResultsTable results={results} isAnalyzing={isAnalyzing} />
+                                <ResultsTable
+                                    results={results}
+                                    isAnalyzing={isAnalyzing}
+                                    rawCode={directAnalysisRawCode ?? undefined}
+                                />
                             </div>
                         </section>
                     </div>

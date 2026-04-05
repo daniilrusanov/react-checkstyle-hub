@@ -257,6 +257,51 @@ export const analyzeCode = async (request: CodeAnalysisRequest): Promise<CodeAna
  * @returns Promise resolving to a Markdown string with the AI explanation
  * @throws Error if not authenticated, the result is not found, or the LLM call fails
  */
+/**
+ * Stateless AI explanation request (direct code analysis — no persisted {@link AnalysisResult} id).
+ */
+export interface StatelessAiRequest {
+    code: string;
+    message: string;
+    lineNumber: number;
+}
+
+/**
+ * Requests an AI explanation for a violation without a saved analysis result.
+ *
+ * Calls `POST /api/ai/explain/stateless` with the full source, violation message, and line number.
+ * The backend extracts a window of lines around the violation and returns Markdown.
+ */
+export const getStatelessAiExplanation = async (request: StatelessAiRequest): Promise<string> => {
+    const response = await fetch(`${BACKEND_URL}/api/ai/explain/stateless`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Будь ласка, увійдіть в систему для отримання AI пояснень');
+        }
+        let message: string;
+        try {
+            const body = await response.json() as { message?: string; error?: string };
+            message = body.message ?? body.error ?? response.statusText;
+        } catch {
+            message = await response.text().catch(() => response.statusText);
+        }
+        if (response.status === 503) {
+            throw new Error(message);
+        }
+        throw new Error(`Помилка серверу (${response.status}): ${message}`);
+    }
+
+    return await response.text();
+};
+
 export const getAiExplanation = async (resultId: number): Promise<string> => {
     const response = await fetch(`${BACKEND_URL}/api/ai/explain/${resultId}`, {
         method: 'POST',
