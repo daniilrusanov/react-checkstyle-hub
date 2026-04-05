@@ -85,6 +85,8 @@ export interface AnalysisStatus {
     errorMessage: string | null;
     /** Timestamp when the request was created */
     createdAt: string;
+    /** Quality score (0-100) populated once analysis is COMPLETED */
+    qualityScore?: number;
 }
 
 /**

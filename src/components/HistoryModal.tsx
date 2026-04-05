@@ -335,6 +335,32 @@ export const HistoryModal = ({ isOpen, onClose, onViewResults }: HistoryModalPro
                                                 }}>
                                                     {getStatusText(item.status)}
                                                 </span>
+                                                {item.qualityScore != null && (
+                                                    <span style={{
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        whiteSpace: 'nowrap',
+                                                        background: item.qualityScore >= 80
+                                                            ? (isDark ? 'rgba(34, 197, 94, 0.12)' : 'rgba(22, 163, 74, 0.08)')
+                                                            : item.qualityScore >= 50
+                                                                ? (isDark ? 'rgba(251, 191, 36, 0.12)' : 'rgba(202, 138, 4, 0.08)')
+                                                                : (isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(220, 38, 38, 0.08)'),
+                                                        color: item.qualityScore >= 80
+                                                            ? colors.success
+                                                            : item.qualityScore >= 50
+                                                                ? colors.warning
+                                                                : colors.error,
+                                                        border: `1px solid ${item.qualityScore >= 80
+                                                            ? (isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(22, 163, 74, 0.2)')
+                                                            : item.qualityScore >= 50
+                                                                ? (isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(202, 138, 4, 0.2)')
+                                                                : (isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(220, 38, 38, 0.2)')}`
+                                                    }}>
+                                                        QS: {item.qualityScore}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         {item.violationsCount !== null && (

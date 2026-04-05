@@ -1043,6 +1043,32 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                             {item.violationsCount} порушень
                                                         </span>
                                                     )}
+                                                    {item.qualityScore != null && (
+                                                        <span style={{
+                                                            padding: '4px 12px',
+                                                            borderRadius: '6px',
+                                                            fontSize: '13px',
+                                                            fontWeight: '700',
+                                                            whiteSpace: 'nowrap',
+                                                            background: item.qualityScore >= 80
+                                                                ? (isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(22, 163, 74, 0.1)')
+                                                                : item.qualityScore >= 50
+                                                                    ? (isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(202, 138, 4, 0.1)')
+                                                                    : (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(220, 38, 38, 0.1)'),
+                                                            color: item.qualityScore >= 80
+                                                                ? colors.success
+                                                                : item.qualityScore >= 50
+                                                                    ? colors.warning
+                                                                    : colors.error,
+                                                            border: `1px solid ${item.qualityScore >= 80
+                                                                ? (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(22, 163, 74, 0.25)')
+                                                                : item.qualityScore >= 50
+                                                                    ? (isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(202, 138, 4, 0.25)')
+                                                                    : (isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(220, 38, 38, 0.25)')}`
+                                                        }}>
+                                                            QS: {item.qualityScore}
+                                                        </span>
+                                                    )}
                                                     <span style={{
                                                         padding: '4px 12px',
                                                         borderRadius: '6px',

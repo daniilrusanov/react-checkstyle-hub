@@ -26,6 +26,60 @@ import { startAnalysis, fetchResults, pollStatus, analyzeCode, type AnalysisResu
 import { connectWebSocket, type LogEntry } from './services/socket';
 import './index.css';
 
+// ─── Quality Score Ring ────────────────────────────────────────────────────────
+
+function QualityScoreRing({ score, size = 68, isDark, colors }: {
+    score: number;
+    size?: number;
+    isDark: boolean;
+    colors: ReturnType<typeof getThemeColors>;
+}) {
+    const strokeWidth = 5;
+    const radius = (size - strokeWidth * 2) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference * (1 - Math.max(0, Math.min(100, score)) / 100);
+    const ringColor = score >= 80 ? colors.success : score >= 50 ? colors.warning : colors.error;
+
+    return (
+        <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+                <circle
+                    cx={size / 2} cy={size / 2} r={radius}
+                    fill="none"
+                    stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}
+                    strokeWidth={strokeWidth}
+                />
+                <circle
+                    cx={size / 2} cy={size / 2} r={radius}
+                    fill="none"
+                    stroke={ringColor}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+            </svg>
+            <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '1px'
+            }}>
+                <span style={{ fontSize: Math.round(size * 0.27), fontWeight: 'bold', color: ringColor, lineHeight: 1 }}>
+                    {score}
+                </span>
+                <span style={{ fontSize: Math.round(size * 0.14), color: colors.textMuted, lineHeight: 1 }}>
+                    /100
+                </span>
+            </div>
+        </div>
+    );
+}
+
 /**
  * Root application component
  * 
@@ -58,6 +112,8 @@ function App() {
     const [isDashboardOpen, setIsDashboardOpen] = useState(false);
     /** External URL for form (set from history/dashboard) */
     const [externalRepoUrl, setExternalRepoUrl] = useState<string | undefined>(undefined);
+    /** Quality score (0–100) from the last completed analysis */
+    const [qualityScore, setQualityScore] = useState<number | null>(null);
     
     /** Auth context */
     const { isAuthenticated } = useAuth();
@@ -128,6 +184,7 @@ function App() {
         setResults([]);
         setCurrentRequestId(null);
         setAnalysisStatus(null);
+        setQualityScore(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Надсилаю запит на аналіз...' }]);
@@ -152,7 +209,7 @@ function App() {
             // Poll status until completion
             setLogs(prev => [...prev, { level: 'INFO', message: 'Перевіряю статус аналізу...' }]);
             
-            await pollStatus(requestId, (status) => {
+            const finalStatus = await pollStatus(requestId, (status) => {
                 setAnalysisStatus(status.status);
                 const statusMsg = getStatusMessage(status.status);
                 setLogs(prev => {
@@ -164,6 +221,10 @@ function App() {
                     return [...prev, { level: 'INFO', message: statusMsg }];
                 });
             });
+
+            if (finalStatus.qualityScore != null) {
+                setQualityScore(finalStatus.qualityScore);
+            }
 
             // Analysis completed - fetch results
             setLogs(prev => [...prev, { level: 'INFO', message: 'Завантажую результати...' }]);
@@ -199,6 +260,7 @@ function App() {
         setLogs([]);
         setResults([]);
         setAnalysisStatus(null);
+        setQualityScore(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Починаю аналіз коду...' }]);
@@ -266,6 +328,7 @@ function App() {
 
             // Log quality score
             if (result.qualityScore !== undefined) {
+                setQualityScore(result.qualityScore);
                 const scoreEmoji = result.qualityScore >= 80 ? '🌟' : result.qualityScore >= 60 ? '👍' : '⚠️';
                 setLogs(prev => [...prev, { 
                     level: 'INFO', 
@@ -689,32 +752,42 @@ function App() {
                                         Результати
                                     </h2>
                                 </div>
-                                {results.length > 0 && (
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        padding: '10px 24px',
-                                        borderRadius: '12px',
-                                        background: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                                        border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(234, 179, 8, 0.25)'}`
-                                    }}>
-                                        <div className="animate-pulse" style={{
-                                            width: '10px',
-                                            height: '10px',
-                                            background: colors.warning,
-                                            borderRadius: '50%'
-                                        }}></div>
-                                        <span style={{
-                                            fontSize: '16px',
-                                            fontWeight: 'bold',
-                                            color: colors.warning,
-                                            whiteSpace: 'nowrap'
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {results.length > 0 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '10px 24px',
+                                            borderRadius: '12px',
+                                            background: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                            border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(234, 179, 8, 0.25)'}`
                                         }}>
-                                            {results.length} {results.length === 1 ? 'порушення' : 'порушень'}
-                                        </span>
-                                    </div>
-                                )}
+                                            <div className="animate-pulse" style={{
+                                                width: '10px',
+                                                height: '10px',
+                                                background: colors.warning,
+                                                borderRadius: '50%'
+                                            }}></div>
+                                            <span style={{
+                                                fontSize: '16px',
+                                                fontWeight: 'bold',
+                                                color: colors.warning,
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {results.length} {results.length === 1 ? 'порушення' : 'порушень'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {qualityScore !== null && (
+                                        <QualityScoreRing
+                                            score={qualityScore}
+                                            size={68}
+                                            isDark={isDark}
+                                            colors={colors}
+                                        />
+                                    )}
+                                </div>
                             </div>
                             <div className="custom-scrollbar" style={{ 
                                 height: '500px', 

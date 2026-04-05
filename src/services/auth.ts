@@ -70,6 +70,7 @@ export type AnalysisHistoryItem = {
     createdAt: string;
     repoUrl: string;
     violationsCount: number | null;
+    qualityScore?: number | null;
 };
 
 /**
