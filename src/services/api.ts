@@ -241,3 +241,50 @@ export const analyzeCode = async (request: CodeAnalysisRequest): Promise<CodeAna
 
     return await response.json() as CodeAnalysisResponse;
 };
+
+/**
+ * Requests an AI-generated explanation for a single analysis violation.
+ *
+ * Calls `POST /api/ai/explain/{resultId}` on the backend. The backend uses
+ * the authenticated user's experience level to tailor the prompt (STUDENT /
+ * JUNIOR / ADVANCED) and returns a Markdown-formatted string produced by the
+ * local Ollama LLM.
+ *
+ * If an explanation was already generated for this result it is returned from
+ * the backend cache without calling the LLM again.
+ *
+ * @param resultId - The ID of the {@link AnalysisResult} to explain
+ * @returns Promise resolving to a Markdown string with the AI explanation
+ * @throws Error if not authenticated, the result is not found, or the LLM call fails
+ */
+export const getAiExplanation = async (resultId: number): Promise<string> => {
+    const response = await fetch(`${BACKEND_URL}/api/ai/explain/${resultId}`, {
+        method: 'POST',
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Будь ласка, увійдіть в систему для отримання AI пояснень');
+        }
+        if (response.status === 404) {
+            throw new Error('Результат аналізу не знайдено');
+        }
+        // Try to extract a clean message from the JSON error body
+        let message: string;
+        try {
+            const body = await response.json() as { message?: string; error?: string };
+            message = body.message ?? body.error ?? response.statusText;
+        } catch {
+            message = await response.text().catch(() => response.statusText);
+        }
+        if (response.status === 503) {
+            throw new Error(message);
+        }
+        throw new Error(`Помилка серверу (${response.status}): ${message}`);
+    }
+
+    return await response.text();
+};
