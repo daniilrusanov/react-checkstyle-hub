@@ -241,12 +241,16 @@ function buildMarkdownComponents(
 
 // ─── AI Skeleton Loading ──────────────────────────────────────────────────────
 
-const AiSkeleton: React.FC<{ isDark: boolean }> = ({ isDark }) => (
+const AiSkeleton: React.FC<{ isDark: boolean; embedded?: boolean }> = ({ isDark, embedded }) => (
     <div style={{
-        padding: '20px 24px 22px',
-        borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
+        padding: embedded ? '16px 18px 18px' : '20px 24px 22px',
+        marginTop: embedded ? '12px' : undefined,
+        borderRadius: embedded ? '8px' : undefined,
+        border: embedded ? `1px solid ${AI_PURPLE.border}` : undefined,
+        borderBottom: embedded ? undefined : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
         background: AI_PURPLE.bgPanel(isDark),
-        borderLeft: `3px solid ${AI_PURPLE.border}`,
+        borderLeft: embedded ? undefined : `3px solid ${AI_PURPLE.border}`,
+        boxShadow: embedded ? (isDark ? 'inset 0 0 0 1px rgba(139, 92, 246, 0.12)' : 'inset 0 0 0 1px rgba(139, 92, 246, 0.1)') : undefined,
     }}>
         {/* Label row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -289,7 +293,8 @@ const AiPanel: React.FC<{
     error?: string;
     isDark: boolean;
     colors: ReturnType<typeof getThemeColors>;
-}> = ({ explanation, error, isDark, colors }) => {
+    embedded?: boolean;
+}> = ({ explanation, error, isDark, colors, embedded }) => {
     const mdComponents = useMemo(
         () => buildMarkdownComponents(isDark, colors),
         [isDark, colors]
@@ -297,10 +302,14 @@ const AiPanel: React.FC<{
 
     return (
         <div style={{
-            padding: '18px 24px 22px',
-            borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
+            padding: embedded ? '16px 18px 18px' : '18px 24px 22px',
+            marginTop: embedded ? '12px' : undefined,
+            borderRadius: embedded ? '8px' : undefined,
+            border: embedded ? `1px solid ${AI_PURPLE.border}` : undefined,
+            borderBottom: embedded ? undefined : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
             background: AI_PURPLE.bgPanel(isDark),
-            borderLeft: `3px solid ${AI_PURPLE.border}`,
+            borderLeft: embedded ? undefined : `3px solid ${AI_PURPLE.border}`,
+            boxShadow: embedded ? (isDark ? 'inset 0 0 0 1px rgba(139, 92, 246, 0.12)' : 'inset 0 0 0 1px rgba(139, 92, 246, 0.1)') : undefined,
             animation: 'fadeIn 0.25s ease-out',
         }}>
             {/* Panel header */}
@@ -382,47 +391,41 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
     const btnActive = isExpanded && hasResult;
 
     return (
-        <>
-            {/* ── Main violation row ── */}
-            <div
-                style={{
-                    padding: '24px',
-                    borderBottom: isLoadingAi || (isExpanded && hasResult)
-                        ? 'none'
-                        : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
-                    transition: 'background 0.2s',
-                    animation: 'fadeIn 0.3s ease-out',
-                    animationDelay: `${index * 0.03}s`,
-                    animationFillMode: 'both',
-                    minWidth: 'fit-content',
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.background = isDark
-                        ? 'rgba(255, 255, 255, 0.02)'
-                        : 'rgba(0, 0, 0, 0.02)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                }}
-            >
-                {/* Header row: file path + badges + AI button */}
+        <div
+            style={{
+                padding: '24px',
+                borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'}`,
+                transition: 'background 0.2s',
+                animation: 'fadeIn 0.3s ease-out',
+                animationDelay: `${index * 0.03}s`,
+                animationFillMode: 'both',
+                minWidth: 'fit-content',
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark
+                    ? 'rgba(255, 255, 255, 0.02)'
+                    : 'rgba(0, 0, 0, 0.02)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+            }}
+        >
+            {/* Row 1 — badges (left) + AI button (right) */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '12px',
+                flexWrap: 'wrap',
+            }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '16px',
-                    marginBottom: '12px',
-                    flexWrap: 'nowrap',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                    minWidth: 0,
                 }}>
-                    <FileCode style={{ width: '20px', height: '20px', color: colors.textMuted, flexShrink: 0 }} />
-                    <span style={{
-                        fontSize: '14px',
-                        fontFamily: 'monospace',
-                        color: colors.textSecondary,
-                        whiteSpace: 'nowrap',
-                    }}>
-                        {result.filePath}
-                    </span>
-
                     {/* Line number badge */}
                     <div style={{
                         display: 'flex',
@@ -481,96 +484,115 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
                     }}>
                         {sevConfig.label}
                     </span>
-
-                    {/* ── AI Explain button ── */}
-                    <button
-                        onClick={onExplainClick}
-                        disabled={isLoadingAi}
-                        title={btnActive ? 'Сховати AI пояснення' : 'Отримати AI пояснення'}
-                        style={{
-                            marginLeft: 'auto',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '5px 12px',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            letterSpacing: '0.02em',
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                            cursor: isLoadingAi ? 'wait' : 'pointer',
-                            border: `1px solid ${btnActive || isLoadingAi ? AI_PURPLE.borderHover : AI_PURPLE.border}`,
-                            background: btnActive
-                                ? AI_PURPLE.bgBtn(isDark)
-                                : isLoadingAi
-                                    ? (isDark ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)')
-                                    : 'transparent',
-                            color: AI_PURPLE.text(isDark),
-                            transition: 'all 0.18s',
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!isLoadingAi) {
-                                (e.currentTarget as HTMLButtonElement).style.background = AI_PURPLE.bgBtn(isDark);
-                                (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.borderHover;
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!isLoadingAi && !btnActive) {
-                                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                                (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.border;
-                            }
-                        }}
-                    >
-                        {isLoadingAi ? (
-                            <Loader2 className="animate-spin" style={{ width: '13px', height: '13px' }} />
-                        ) : (
-                            <Sparkles style={{ width: '13px', height: '13px' }} />
-                        )}
-                        {isLoadingAi ? 'Аналізую…' : btnActive ? 'Сховати' : 'Пояснити AI'}
-                    </button>
                 </div>
 
-                {/* Message row */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    paddingLeft: '36px',
-                }}>
-                    <AlertTriangle style={{
-                        width: '18px',
-                        height: '18px',
-                        color: isDark ? colors.warning : 'rgb(202, 138, 4)',
-                        flexShrink: 0,
-                        marginTop: '2px',
-                    }} />
-                    <p style={{
-                        fontSize: '15px',
-                        color: colors.textPrimary,
-                        lineHeight: '1.5',
-                        fontWeight: '500',
-                        margin: 0,
+                <button
+                    onClick={onExplainClick}
+                    disabled={isLoadingAi}
+                    title={btnActive ? 'Сховати AI пояснення' : 'Отримати AI пояснення'}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        letterSpacing: '0.02em',
                         whiteSpace: 'nowrap',
-                    }}>
-                        {result.message}
-                    </p>
-                </div>
+                        flexShrink: 0,
+                        cursor: isLoadingAi ? 'wait' : 'pointer',
+                        border: `1px solid ${btnActive || isLoadingAi ? AI_PURPLE.borderHover : AI_PURPLE.border}`,
+                        background: btnActive
+                            ? AI_PURPLE.bgBtn(isDark)
+                            : isLoadingAi
+                                ? (isDark ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)')
+                                : 'transparent',
+                        color: AI_PURPLE.text(isDark),
+                        transition: 'all 0.18s',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isLoadingAi) {
+                            (e.currentTarget as HTMLButtonElement).style.background = AI_PURPLE.bgBtn(isDark);
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.borderHover;
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isLoadingAi && !btnActive) {
+                            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.border;
+                        }
+                    }}
+                >
+                    {isLoadingAi ? (
+                        <Loader2 className="animate-spin" style={{ width: '13px', height: '13px' }} />
+                    ) : (
+                        <Sparkles style={{ width: '13px', height: '13px' }} />
+                    )}
+                    {isLoadingAi ? 'Аналізую…' : btnActive ? 'Сховати' : 'Пояснити AI'}
+                </button>
             </div>
 
-            {/* ── Loading skeleton ── */}
-            {isLoadingAi && <AiSkeleton isDark={isDark} />}
+            {/* Row 2 — file path */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '8px',
+                minWidth: 0,
+            }}>
+                <FileCode style={{ width: '18px', height: '18px', color: colors.textMuted, flexShrink: 0 }} />
+                <span style={{
+                    fontSize: '13px',
+                    fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+                    color: colors.textMuted,
+                    lineHeight: '1.45',
+                    wordBreak: 'break-all',
+                    overflowWrap: 'anywhere',
+                }}>
+                    {result.filePath}
+                </span>
+            </div>
 
-            {/* ── Expanded AI explanation panel ── */}
+            {/* Row 3 — violation message */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                minWidth: 0,
+            }}>
+                <AlertTriangle style={{
+                    width: '18px',
+                    height: '18px',
+                    color: sevConfig.text,
+                    flexShrink: 0,
+                    marginTop: '2px',
+                }} />
+                <p style={{
+                    fontSize: '15px',
+                    color: colors.textPrimary,
+                    lineHeight: '1.5',
+                    fontWeight: '500',
+                    margin: 0,
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                }}>
+                    {result.message}
+                </p>
+            </div>
+
+            {/* Row 4 — AI loading / explanation */}
+            {isLoadingAi && <AiSkeleton isDark={isDark} embedded />}
             {!isLoadingAi && isExpanded && hasResult && (
                 <AiPanel
                     explanation={aiExplanation ?? ''}
                     error={aiError}
                     isDark={isDark}
                     colors={colors}
+                    embedded
                 />
             )}
-        </>
+        </div>
     );
 };
 
