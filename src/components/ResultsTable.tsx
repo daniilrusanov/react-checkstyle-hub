@@ -1,8 +1,8 @@
 /**
  * Results Table Component
  *
- * Displays Checkstyle violations found during analysis in a user-friendly format.
- * Shows file paths, line numbers, severity levels, and detailed messages.
+ * Displays Checkstyle and PMD violations found during analysis in a user-friendly format.
+ * Shows file paths, line numbers, analyzer type, normalized severity, and detailed messages.
  */
 
 import React from 'react';
@@ -21,22 +21,69 @@ interface ResultsTableProps {
 }
 
 /**
+ * Returns background color, text color, border color, and display label for a
+ * severity value that may originate from either Checkstyle or PMD.
+ *
+ * Checkstyle levels : "error" → red | "warning" → yellow | "info" → gray
+ * PMD levels        : "HIGH"/"ERROR" → red | "MEDIUM*" → yellow | "LOW" → gray
+ */
+function getSeverityConfig(
+    severity: string,
+    analyzerType: string | undefined,
+    isDark: boolean,
+    colors: ReturnType<typeof getThemeColors>
+): { bg: string; text: string; border: string; label: string } {
+    const s = severity.toUpperCase();
+    const isError =
+        s === 'ERROR' ||
+        (analyzerType === 'PMD' && (s === 'HIGH' || s === 'ERROR'));
+    const isWarning =
+        s === 'WARNING' ||
+        (analyzerType === 'PMD' && (s === 'MEDIUM' || s === 'MEDIUM_HIGH' || s === 'MEDIUM_LOW'));
+
+    if (isError) {
+        return {
+            bg:     isDark ? 'rgba(239, 68, 68, 0.2)'  : 'rgba(220, 38, 38, 0.1)',
+            text:   isDark ? 'rgb(248, 113, 113)'       : 'rgb(185, 28, 28)',
+            border: isDark ? 'rgba(239, 68, 68, 0.3)'  : 'rgba(220, 38, 38, 0.25)',
+            label: 'ERROR',
+        };
+    }
+    if (isWarning) {
+        return {
+            bg:     isDark ? 'rgba(251, 191, 36, 0.2)'  : 'rgba(202, 138, 4, 0.12)',
+            text:   isDark ? colors.warning              : 'rgb(161, 98, 7)',
+            border: isDark ? 'rgba(251, 191, 36, 0.3)'  : 'rgba(202, 138, 4, 0.3)',
+            label: 'WARNING',
+        };
+    }
+    // info / low / anything else → gray
+    return {
+        bg:     isDark ? 'rgba(100, 116, 139, 0.2)'  : 'rgba(100, 116, 139, 0.1)',
+        text:   colors.textMuted,
+        border: isDark ? 'rgba(100, 116, 139, 0.3)'  : 'rgba(100, 116, 139, 0.25)',
+        label: 'INFO',
+    };
+}
+
+/**
  * Individual result entry component
  *
- * Renders a single Checkstyle violation with:
+ * Renders a single violation with:
  * - File path and name
- * - Line number location
- * - Severity badge (error/warning)
+ * - Line number + analyzer-type badges
+ * - Severity badge (normalized across Checkstyle and PMD)
  * - Detailed violation message
  *
  * @param result - The analysis result to display
- * @param index - Position in a result array (used for staggered animations)
- * @param isDark - Boolean isDark variable
+ * @param index  - Position in result array (used for staggered animations)
+ * @param isDark - Whether dark theme is active
  */
 const ResultEntry: React.FC<{ result: AnalysisResult; index: number; isDark: boolean }> = ({result, index, isDark}) => {
-    /** Determines styling based on severity */
-    const isError = result.severity === 'error';
     const colors = getThemeColors(isDark);
+    const sevConfig = getSeverityConfig(result.severity, result.analyzerType, isDark, colors);
+    const analyzerLabel = result.analyzerType === 'PMD' ? '[PMD]' : '[CS]';
+    const isCheckstyle = result.analyzerType !== 'PMD';
 
     return (
         <div
@@ -50,7 +97,7 @@ const ResultEntry: React.FC<{ result: AnalysisResult; index: number; isDark: boo
                 minWidth: 'fit-content'
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.background = isDark 
+                e.currentTarget.style.background = isDark
                     ? 'rgba(255, 255, 255, 0.02)'
                     : 'rgba(0, 0, 0, 0.02)';
             }}
@@ -68,13 +115,15 @@ const ResultEntry: React.FC<{ result: AnalysisResult; index: number; isDark: boo
             }}>
                 <FileCode style={{width: '20px', height: '20px', color: colors.textMuted, flexShrink: 0}}/>
                 <span style={{
-                    fontSize: '14px', 
-                    fontFamily: 'monospace', 
+                    fontSize: '14px',
+                    fontFamily: 'monospace',
                     color: colors.textSecondary,
                     whiteSpace: 'nowrap'
                 }}>
                     {result.filePath}
                 </span>
+
+                {/* Line number badge */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -95,46 +144,64 @@ const ResultEntry: React.FC<{ result: AnalysisResult; index: number; isDark: boo
                         Рядок {result.lineNumber}
                     </span>
                 </div>
+
+                {/* Analyzer-type badge */}
+                <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.04em',
+                    flexShrink: 0,
+                    background: isCheckstyle
+                        ? (isDark ? 'rgba(34, 197, 94, 0.15)'  : 'rgba(22, 163, 74, 0.1)')
+                        : (isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(126, 34, 206, 0.1)'),
+                    color: isCheckstyle
+                        ? (isDark ? colors.success : 'rgb(21, 128, 61)')
+                        : (isDark ? 'rgb(216, 180, 254)' : 'rgb(126, 34, 206)'),
+                    border: isCheckstyle
+                        ? `1px solid ${isDark ? 'rgba(34, 197, 94, 0.3)'  : 'rgba(22, 163, 74, 0.3)'}`
+                        : `1px solid ${isDark ? 'rgba(168, 85, 247, 0.3)' : 'rgba(126, 34, 206, 0.3)'}`,
+                }}>
+                    {analyzerLabel}
+                </span>
+
+                {/* Severity badge */}
                 <span style={{
                     padding: '4px 10px',
                     borderRadius: '6px',
                     fontSize: '12px',
                     fontWeight: 'bold',
                     whiteSpace: 'nowrap',
-                    background: isError 
-                        ? (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(220, 38, 38, 0.1)')
-                        : (isDark ? 'rgba(251, 191, 36, 0.2)' : 'rgba(202, 138, 4, 0.12)'),
-                    color: isError 
-                        ? (isDark ? 'rgb(248, 113, 113)' : 'rgb(185, 28, 28)')
-                        : (isDark ? 'rgb(251, 191, 36)' : 'rgb(161, 98, 7)'),
-                    border: isError 
-                        ? `1px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(220, 38, 38, 0.25)'}`
-                        : `1px solid ${isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(202, 138, 4, 0.3)'}`,
-                    flexShrink: 0
+                    flexShrink: 0,
+                    background: sevConfig.bg,
+                    color: sevConfig.text,
+                    border: `1px solid ${sevConfig.border}`,
                 }}>
-                    {result.severity === 'error' ? 'Warning' : result.severity}
+                    {sevConfig.label}
                 </span>
             </div>
 
             {/* Message row */}
             <div style={{
-                display: 'flex', 
-                alignItems: 'flex-start', 
+                display: 'flex',
+                alignItems: 'flex-start',
                 gap: '12px',
                 paddingLeft: '36px'
             }}>
                 <AlertTriangle style={{
-                    width: '18px', 
-                    height: '18px', 
-                    color: isDark ? 'rgb(251, 191, 36)' : 'rgb(202, 138, 4)', 
-                    flexShrink: 0, 
+                    width: '18px',
+                    height: '18px',
+                    color: isDark ? colors.warning : 'rgb(202, 138, 4)',
+                    flexShrink: 0,
                     marginTop: '2px'
                 }}/>
                 <p style={{
-                    fontSize: '15px', 
-                    color: colors.textPrimary, 
-                    lineHeight: '1.5', 
-                    fontWeight: '500', 
+                    fontSize: '15px',
+                    color: colors.textPrimary,
+                    lineHeight: '1.5',
+                    fontWeight: '500',
                     margin: 0,
                     whiteSpace: 'nowrap'
                 }}>

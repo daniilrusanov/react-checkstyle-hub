@@ -69,6 +69,8 @@ export interface AnalysisResult {
     severity: string;
     /** Detailed description of the violation */
     message: string;
+    /** Which analyzer produced this violation */
+    analyzerType?: 'CHECKSTYLE' | 'PMD';
 }
 
 /**
