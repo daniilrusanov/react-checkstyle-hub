@@ -9,8 +9,10 @@
  */
 
 import { useState } from 'react';
-import { Settings, LogIn } from 'lucide-react';
+import { Settings, LogIn, Sparkles, Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { AnalysisForm } from './components/AnalysisForm';
 import { LogTerminal } from './components/LogTerminal';
 import { ResultsTable } from './components/ResultsTable';
@@ -22,7 +24,7 @@ import { UserDashboard } from './components/UserDashboard';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useAuth } from './context/AuthContext';
 import { useTheme, getThemeColors } from './context/ThemeContext';
-import { startAnalysis, fetchResults, pollStatus, analyzeCode, type AnalysisResult, type AnalysisStatus } from './services/api';
+import { startAnalysis, fetchResults, pollStatus, analyzeCode, getGeneralSummary, type AnalysisResult, type AnalysisStatus } from './services/api';
 import { connectWebSocket, type LogEntry } from './services/socket';
 import './index.css';
 
@@ -97,7 +99,7 @@ function App() {
     /** Whether an analysis is currently in progress */
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     /** ID of the current/last analysis request */
-    const [, setCurrentRequestId] = useState<string | null>(null);
+    const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
     /** Controls configuration modal visibility */
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     /** Current status of the analysis */
@@ -114,6 +116,12 @@ function App() {
     const [externalRepoUrl, setExternalRepoUrl] = useState<string | undefined>(undefined);
     /** Quality score (0–100) from the last completed analysis */
     const [qualityScore, setQualityScore] = useState<number | null>(null);
+    /** General AI summary text (FRS06) */
+    const [summaryText, setSummaryText] = useState<string | null>(null);
+    /** Whether the general AI summary is being fetched */
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    /** Error message from the general AI summary fetch */
+    const [summaryError, setSummaryError] = useState<string | null>(null);
     
     /** Auth context */
     const { isAuthenticated } = useAuth();
@@ -185,6 +193,8 @@ function App() {
         setCurrentRequestId(null);
         setAnalysisStatus(null);
         setQualityScore(null);
+        setSummaryText(null);
+        setSummaryError(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Надсилаю запит на аналіз...' }]);
@@ -261,6 +271,8 @@ function App() {
         setResults([]);
         setAnalysisStatus(null);
         setQualityScore(null);
+        setSummaryText(null);
+        setSummaryError(null);
 
         try {
             setLogs(prev => [...prev, { level: 'INFO', message: 'Починаю аналіз коду...' }]);
@@ -352,9 +364,99 @@ function App() {
         }
     };
 
+    /** FRS06 — fetches the general AI summary for the current request. */
+    const handleGetSummary = async () => {
+        if (!currentRequestId || summaryLoading) return;
+        setSummaryLoading(true);
+        setSummaryError(null);
+        setSummaryText(null);
+        try {
+            const text = await getGeneralSummary(currentRequestId);
+            setSummaryText(text);
+        } catch (err) {
+            setSummaryError(err instanceof Error ? err.message : 'Помилка отримання висновку');
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
+
+    /** Themed ReactMarkdown component map for the summary card. */
+    const buildSummaryMarkdownComponents = (): Components => ({
+        p: ({ children }) => (
+            <p style={{ color: colors.textPrimary, fontSize: '15px', lineHeight: '1.8', marginBottom: '12px', marginTop: 0 }}>
+                {children}
+            </p>
+        ),
+        h1: ({ children }) => (
+            <h1 style={{ color: colors.textPrimary, fontSize: '18px', fontWeight: '700', marginTop: '20px', marginBottom: '10px' }}>
+                {children}
+            </h1>
+        ),
+        h2: ({ children }) => (
+            <h2 style={{ color: colors.textPrimary, fontSize: '16px', fontWeight: '700', marginTop: '18px', marginBottom: '8px' }}>
+                {children}
+            </h2>
+        ),
+        h3: ({ children }) => (
+            <h3 style={{ color: isDark ? 'rgb(196, 181, 253)' : 'rgb(109, 40, 217)', fontSize: '15px', fontWeight: '600', marginTop: '14px', marginBottom: '6px' }}>
+                {children}
+            </h3>
+        ),
+        strong: ({ children }) => (
+            <strong style={{ color: isDark ? 'rgb(216, 180, 254)' : 'rgb(109, 40, 217)', fontWeight: '600' }}>
+                {children}
+            </strong>
+        ),
+        ul: ({ children }) => (
+            <ul style={{ color: colors.textPrimary, fontSize: '15px', lineHeight: '1.8', paddingLeft: '20px', marginBottom: '12px' }}>
+                {children}
+            </ul>
+        ),
+        ol: ({ children }) => (
+            <ol style={{ color: colors.textPrimary, fontSize: '15px', lineHeight: '1.8', paddingLeft: '20px', marginBottom: '12px' }}>
+                {children}
+            </ol>
+        ),
+        li: ({ children }) => (
+            <li style={{ marginBottom: '4px' }}>{children}</li>
+        ),
+        code: ({ children, className }) => {
+            const isBlock = className?.startsWith('language-');
+            return isBlock ? (
+                <code style={{
+                    display: 'block',
+                    background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.04)',
+                    borderRadius: '6px',
+                    padding: '12px 16px',
+                    fontSize: '13px',
+                    fontFamily: 'monospace',
+                    color: colors.textPrimary,
+                    overflowX: 'auto',
+                    border: `1px solid ${isDark ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.18)'}`,
+                }}>
+                    {children}
+                </code>
+            ) : (
+                <code style={{
+                    background: isDark ? 'rgba(139,92,246,0.18)' : 'rgba(139,92,246,0.1)',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    fontSize: '13px',
+                    fontFamily: 'monospace',
+                    color: isDark ? 'rgb(216,180,254)' : 'rgb(109,40,217)',
+                }}>
+                    {children}
+                </code>
+            );
+        },
+        pre: ({ children }) => (
+            <pre style={{ margin: '10px 0', borderRadius: '8px', overflow: 'hidden' }}>{children}</pre>
+        ),
+    });
+
     return (
         <>
-            <Toaster 
+            <Toaster
                 position="top-right"
                 toastOptions={{
                     duration: 4000,
@@ -675,6 +777,142 @@ function App() {
                             </div>
                         )}
                     </div>
+
+                    {/* ── FRS06: General AI Summary ─────────────────────────────────────── */}
+                    {analysisStatus === 'COMPLETED' && results.length > 0 && currentRequestId !== null && (
+                        <div style={{
+                            marginBottom: '32px',
+                            animation: 'fadeIn 0.4s ease-out',
+                            animationFillMode: 'both'
+                        }}>
+                            <div style={{
+                                background: isDark
+                                    ? 'rgba(139, 92, 246, 0.07)'
+                                    : 'rgba(139, 92, 246, 0.05)',
+                                backdropFilter: 'blur(40px)',
+                                border: `1.5px solid ${isDark ? 'rgba(139, 92, 246, 0.35)' : 'rgba(139, 92, 246, 0.3)'}`,
+                                borderRadius: '1rem',
+                                boxShadow: isDark
+                                    ? '0 8px 32px rgba(139, 92, 246, 0.12)'
+                                    : '0 4px 20px rgba(139, 92, 246, 0.08)',
+                                overflow: 'hidden',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                {/* Header row */}
+                                <div style={{
+                                    padding: '20px 28px',
+                                    borderBottom: summaryText || summaryLoading || summaryError
+                                        ? `1px solid ${isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.18)'}`
+                                        : 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '16px',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{
+                                            width: '4px',
+                                            height: '32px',
+                                            background: 'linear-gradient(to bottom, rgb(139, 92, 246), rgb(168, 85, 247))',
+                                            borderRadius: '9999px'
+                                        }} />
+                                        <h2 style={{
+                                            fontSize: '20px',
+                                            fontWeight: '700',
+                                            color: isDark ? 'rgb(196, 181, 253)' : 'rgb(109, 40, 217)',
+                                            margin: 0
+                                        }}>
+                                            Загальний висновок ШІ
+                                        </h2>
+                                    </div>
+
+                                    <button
+                                        onClick={handleGetSummary}
+                                        disabled={summaryLoading}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            padding: '12px 24px',
+                                            background: summaryLoading
+                                                ? (isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.12)')
+                                                : 'linear-gradient(135deg, rgb(139, 92, 246), rgb(109, 40, 217))',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            boxShadow: summaryLoading ? 'none' : '0 6px 20px rgba(139, 92, 246, 0.35)',
+                                            cursor: summaryLoading ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            opacity: summaryLoading ? 0.7 : 1,
+                                            flexShrink: 0
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!summaryLoading) {
+                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                e.currentTarget.style.boxShadow = '0 10px 28px rgba(139, 92, 246, 0.45)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = summaryLoading ? 'none' : '0 6px 20px rgba(139, 92, 246, 0.35)';
+                                        }}
+                                    >
+                                        {summaryLoading
+                                            ? <Loader2 style={{ width: '18px', height: '18px', color: isDark ? 'rgb(196,181,253)' : 'rgb(109,40,217)', animation: 'spin 1s linear infinite' }} />
+                                            : <Sparkles style={{ width: '18px', height: '18px', color: 'white' }} />
+                                        }
+                                        <span style={{
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: summaryLoading ? (isDark ? 'rgb(196,181,253)' : 'rgb(109,40,217)') : 'white'
+                                        }}>
+                                            {summaryLoading ? 'Генерую висновок...' : (summaryText ? 'Оновити висновок' : 'Отримати загальний висновок ШІ')}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {/* Loading skeleton */}
+                                {summaryLoading && (
+                                    <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {[100, 85, 92, 70, 88].map((w, i) => (
+                                            <div
+                                                key={i}
+                                                className="animate-pulse"
+                                                style={{
+                                                    height: '14px',
+                                                    width: `${w}%`,
+                                                    borderRadius: '6px',
+                                                    background: isDark ? 'rgba(139,92,246,0.18)' : 'rgba(139,92,246,0.1)',
+                                                    animationDelay: `${i * 80}ms`
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Error state */}
+                                {!summaryLoading && summaryError && (
+                                    <div style={{
+                                        padding: '20px 28px',
+                                        color: isDark ? 'rgb(248,113,113)' : 'rgb(185,28,28)',
+                                        fontSize: '14px',
+                                        lineHeight: '1.6'
+                                    }}>
+                                        {summaryError}
+                                    </div>
+                                )}
+
+                                {/* Markdown result */}
+                                {!summaryLoading && summaryText && (
+                                    <div style={{ padding: '24px 28px' }}>
+                                        <ReactMarkdown components={buildSummaryMarkdownComponents()}>
+                                            {summaryText}
+                                        </ReactMarkdown>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div style={{
                         display: 'grid',

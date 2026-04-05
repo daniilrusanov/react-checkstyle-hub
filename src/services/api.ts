@@ -288,3 +288,46 @@ export const getAiExplanation = async (resultId: number): Promise<string> => {
 
     return await response.text();
 };
+
+/**
+ * FRS06 — Requests a general AI-generated summary of the most frequent violations
+ * found in a completed analysis request.
+ *
+ * Calls `GET /api/ai/summary/{requestId}`. The backend aggregates the top-5
+ * most frequent violation messages and sends them to the local Ollama LLM,
+ * which returns a Markdown-formatted summary tailored to the user's experience level.
+ *
+ * @param requestId - The ID of the completed analysis request
+ * @returns Promise resolving to a Markdown string with improvement advice
+ * @throws Error if not authenticated, the request is not found, or the LLM call fails
+ */
+export const getGeneralSummary = async (requestId: string): Promise<string> => {
+    const response = await fetch(`${BACKEND_URL}/api/ai/summary/${requestId}`, {
+        method: 'GET',
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Будь ласка, увійдіть в систему для отримання AI висновку');
+        }
+        if (response.status === 404) {
+            throw new Error('Запит на аналіз не знайдено');
+        }
+        let message: string;
+        try {
+            const body = await response.json() as { message?: string; error?: string };
+            message = body.message ?? body.error ?? response.statusText;
+        } catch {
+            message = await response.text().catch(() => response.statusText);
+        }
+        if (response.status === 503) {
+            throw new Error(message);
+        }
+        throw new Error(`Помилка серверу (${response.status}): ${message}`);
+    }
+
+    return await response.text();
+};
