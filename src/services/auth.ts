@@ -107,6 +107,16 @@ export type UserCheckstyleSettings = {
 const TOKEN_KEY = 'checkstyle_hub_token';
 const USER_KEY = 'checkstyle_hub_user';
 
+/** Dispatched when API returns 401/403 so {@link AuthProvider} can clear React state. */
+export const AUTH_EXPIRED_EVENT = 'checkstyle-hub-auth-expired';
+
+function notifySessionExpired(): void {
+    clearAuthData();
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
+}
+
 /**
  * Get stored authentication token.
  */
@@ -257,6 +267,10 @@ export const getAnalysisHistory = async (): Promise<AnalysisHistoryItem[]> => {
     });
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            notifySessionExpired();
+            throw new Error('Сесія закінчилась. Увійдіть знову.');
+        }
         throw new Error('Не вдалося завантажити історію');
     }
 
@@ -277,6 +291,10 @@ export const getUserStatistics = async (): Promise<UserStatistics> => {
     });
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            notifySessionExpired();
+            throw new Error('Сесія закінчилась. Увійдіть знову.');
+        }
         throw new Error('Не вдалося завантажити статистику');
     }
 

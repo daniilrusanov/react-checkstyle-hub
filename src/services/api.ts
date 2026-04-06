@@ -283,7 +283,7 @@ export const getStatelessAiExplanation = async (request: StatelessAiRequest): Pr
     });
 
     if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             throw new Error('Будь ласка, увійдіть в систему для отримання AI пояснень');
         }
         let message: string;
@@ -311,7 +311,7 @@ export const getAiExplanation = async (resultId: number): Promise<string> => {
     });
 
     if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             throw new Error('Будь ласка, увійдіть в систему для отримання AI пояснень');
         }
         if (response.status === 404) {
@@ -355,7 +355,7 @@ export const getGeneralSummary = async (requestId: string): Promise<string> => {
     });
 
     if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             throw new Error('Будь ласка, увійдіть в систему для отримання AI висновку');
         }
         if (response.status === 404) {

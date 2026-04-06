@@ -85,7 +85,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
     
     const { isDark } = useTheme();
     const colors = getThemeColors(isDark);
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, logout } = useAuth();
 
     // Disable body scroll when modal is open
     useEffect(() => {
@@ -113,6 +113,11 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 fetch(`${BACKEND_URL}/api/user/statistics`, { headers: getAuthHeaders() }),
                 fetch(`${BACKEND_URL}/api/user/history`, { headers: getAuthHeaders() })
             ]);
+
+            if (statsRes.status === 401 || statsRes.status === 403 || historyRes.status === 401 || historyRes.status === 403) {
+                logout();
+                return;
+            }
 
             if (statsRes.ok) {
                 const stats = await statsRes.json();

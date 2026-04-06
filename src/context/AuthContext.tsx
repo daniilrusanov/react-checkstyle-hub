@@ -11,6 +11,7 @@ import {
     login as authLogin,
     register as authRegister,
     logout as authLogout,
+    AUTH_EXPIRED_EVENT,
     type User, 
     type LoginRequest, 
     type RegisterRequest, 
@@ -44,6 +45,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(storedUser);
         }
         setIsLoading(false);
+    }, []);
+
+    useEffect(() => {
+        const onSessionExpired = () => {
+            authLogout();
+            setUser(null);
+        };
+        window.addEventListener(AUTH_EXPIRED_EVENT, onSessionExpired);
+        return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onSessionExpired);
     }, []);
 
     const login = async (data: LoginRequest): Promise<AuthResponse> => {
