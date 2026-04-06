@@ -13,6 +13,7 @@ import { AlertTriangle, FileCode, Loader2, MapPin, Sparkles } from 'lucide-react
 import type { AnalysisResult } from '../services/api';
 import { getAiExplanation, getStatelessAiExplanation } from '../services/api';
 import { useTheme, getThemeColors } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Props for the ResultsTable component
@@ -376,6 +377,7 @@ interface ResultEntryProps {
     result: AnalysisResult;
     index: number;
     isDark: boolean;
+    isAuthenticated: boolean;
     isLoadingAi: boolean;
     isExpanded: boolean;
     aiExplanation?: string;
@@ -384,7 +386,7 @@ interface ResultEntryProps {
 }
 
 const ResultEntry: React.FC<ResultEntryProps> = ({
-    result, index, isDark,
+    result, index, isDark, isAuthenticated,
     isLoadingAi, isExpanded, aiExplanation, aiError,
     onExplainClick,
 }) => {
@@ -493,9 +495,11 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
                 </div>
 
                 <button
+                    type="button"
                     onClick={onExplainClick}
-                    disabled={isLoadingAi}
-                    title={btnActive ? 'Сховати AI пояснення' : 'Отримати AI пояснення'}
+                    disabled={!isAuthenticated || isLoadingAi}
+                    title={!isAuthenticated ? 'Авторизуйтесь, щоб використовувати ШІ' : ''}
+                    className={!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -507,7 +511,7 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
                         letterSpacing: '0.02em',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        cursor: isLoadingAi ? 'wait' : 'pointer',
+                        cursor: !isAuthenticated ? 'not-allowed' : (isLoadingAi ? 'wait' : 'pointer'),
                         border: `1px solid ${btnActive || isLoadingAi ? AI_PURPLE.borderHover : AI_PURPLE.border}`,
                         background: btnActive
                             ? AI_PURPLE.bgBtn(isDark)
@@ -518,13 +522,13 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
                         transition: 'all 0.18s',
                     }}
                     onMouseEnter={(e) => {
-                        if (!isLoadingAi) {
+                        if (isAuthenticated && !isLoadingAi) {
                             (e.currentTarget as HTMLButtonElement).style.background = AI_PURPLE.bgBtn(isDark);
                             (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.borderHover;
                         }
                     }}
                     onMouseLeave={(e) => {
-                        if (!isLoadingAi && !btnActive) {
+                        if (isAuthenticated && !isLoadingAi && !btnActive) {
                             (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
                             (e.currentTarget as HTMLButtonElement).style.borderColor = AI_PURPLE.border;
                         }
@@ -617,6 +621,7 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
  */
 export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing, rawCode }) => {
     const { isDark } = useTheme();
+    const { isAuthenticated } = useAuth();
     const colors = getThemeColors(isDark);
 
     const [loadingAiForId, setLoadingAiForId] = useState<number | null>(null);
@@ -625,6 +630,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing
     const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
 
     const handleExplainClick = async (result: AnalysisResult) => {
+        if (!isAuthenticated) return;
         const id = result.id;
         const useStatelessAi = rawCode != null && rawCode.length > 0;
 
@@ -671,6 +677,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ results, isAnalyzing
                             result={result}
                             index={index}
                             isDark={isDark}
+                            isAuthenticated={isAuthenticated}
                             isLoadingAi={loadingAiForId === result.id}
                             isExpanded={!!expandedIds[result.id]}
                             aiExplanation={aiExplanations[result.id]}

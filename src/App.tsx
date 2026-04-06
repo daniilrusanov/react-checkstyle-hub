@@ -373,7 +373,7 @@ function App() {
 
     /** FRS06 — fetches the general AI summary for the current request. */
     const handleGetSummary = async () => {
-        if (!currentRequestId || summaryLoading) return;
+        if (!isAuthenticated || !currentRequestId || summaryLoading) return;
         setSummaryLoading(true);
         setSummaryError(null);
         setSummaryText(null);
@@ -835,8 +835,11 @@ function App() {
                                     </div>
 
                                     <button
+                                        type="button"
                                         onClick={handleGetSummary}
-                                        disabled={summaryLoading}
+                                        disabled={!isAuthenticated || summaryLoading}
+                                        title={!isAuthenticated ? 'Авторизуйтесь, щоб використовувати ШІ' : ''}
+                                        className={!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -848,13 +851,13 @@ function App() {
                                             border: 'none',
                                             borderRadius: '10px',
                                             boxShadow: summaryLoading ? 'none' : '0 6px 20px rgba(139, 92, 246, 0.35)',
-                                            cursor: summaryLoading ? 'not-allowed' : 'pointer',
+                                            cursor: !isAuthenticated ? 'not-allowed' : (summaryLoading ? 'not-allowed' : 'pointer'),
                                             transition: 'all 0.2s',
-                                            opacity: summaryLoading ? 0.7 : 1,
+                                            opacity: !isAuthenticated ? undefined : (summaryLoading ? 0.7 : 1),
                                             flexShrink: 0
                                         }}
                                         onMouseEnter={(e) => {
-                                            if (!summaryLoading) {
+                                            if (isAuthenticated && !summaryLoading) {
                                                 e.currentTarget.style.transform = 'translateY(-2px)';
                                                 e.currentTarget.style.boxShadow = '0 10px 28px rgba(139, 92, 246, 0.45)';
                                             }
