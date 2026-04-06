@@ -23,6 +23,20 @@ interface LogTerminalProps {
  * Configuration object mapping log levels to visual properties
  * Defines icons and colors for each severity level
  */
+/** Display label for log level (Ukrainian UI). */
+function formatLogLevelForDisplay(level: LogEntry['level']): string {
+    switch (level) {
+        case 'INFO':
+            return 'ІНФО';
+        case 'WARNING':
+            return 'УВАГА';
+        case 'ERROR':
+            return 'ПОМИЛКА';
+        default:
+            return level;
+    }
+}
+
 const getLevelConfig = (isDark: boolean): Record<LogEntry['level'], {
     icon: React.ReactNode;
     color: string;
@@ -95,7 +109,7 @@ const LogEntryComponent: React.FC<{ log: LogEntry; index: number; isDark: boolea
                     color: config.color,
                     marginRight: '12px'
                 }}>
-                    {log.level}
+                    {formatLogLevelForDisplay(log.level)}
                 </span>
                 <span style={{fontSize: '16px', color: colors.textPrimary, fontWeight: '500'}}>
                     {log.message}

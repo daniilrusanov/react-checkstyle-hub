@@ -35,24 +35,25 @@ interface ResultsTableProps {
  */
 function getSeverityConfig(
     severity: string,
-    analyzerType: string | undefined,
     isDark: boolean,
     colors: ReturnType<typeof getThemeColors>
 ): { bg: string; text: string; border: string; label: string } {
     const s = severity.toUpperCase();
     const isError =
         s === 'ERROR' ||
-        (analyzerType === 'PMD' && (s === 'HIGH' || s === 'ERROR'));
+        s === 'HIGH';
     const isWarning =
         s === 'WARNING' ||
-        (analyzerType === 'PMD' && (s === 'MEDIUM' || s === 'MEDIUM_HIGH' || s === 'MEDIUM_LOW'));
+        s === 'MEDIUM' ||
+        s === 'MEDIUM_HIGH' ||
+        s === 'MEDIUM_LOW';
 
     if (isError) {
         return {
             bg:     isDark ? 'rgba(239, 68, 68, 0.2)'  : 'rgba(220, 38, 38, 0.1)',
             text:   isDark ? 'rgb(248, 113, 113)'       : 'rgb(185, 28, 28)',
             border: isDark ? 'rgba(239, 68, 68, 0.3)'  : 'rgba(220, 38, 38, 0.25)',
-            label: 'ERROR',
+            label: 'ПОМИЛКА',
         };
     }
     if (isWarning) {
@@ -60,14 +61,14 @@ function getSeverityConfig(
             bg:     isDark ? 'rgba(251, 191, 36, 0.2)'  : 'rgba(202, 138, 4, 0.12)',
             text:   isDark ? colors.warning              : 'rgb(161, 98, 7)',
             border: isDark ? 'rgba(251, 191, 36, 0.3)'  : 'rgba(202, 138, 4, 0.3)',
-            label: 'WARNING',
+            label: 'ПОПЕРЕДЖЕННЯ',
         };
     }
     return {
         bg:     isDark ? 'rgba(100, 116, 139, 0.2)'  : 'rgba(100, 116, 139, 0.1)',
         text:   colors.textMuted,
         border: isDark ? 'rgba(100, 116, 139, 0.3)'  : 'rgba(100, 116, 139, 0.25)',
-        label: 'INFO',
+        label: 'ІНФО',
     };
 }
 
@@ -388,8 +389,8 @@ const ResultEntry: React.FC<ResultEntryProps> = ({
     onExplainClick,
 }) => {
     const colors = getThemeColors(isDark);
-    const sevConfig = getSeverityConfig(result.severity, result.analyzerType, isDark, colors);
-    const analyzerLabel = result.analyzerType === 'PMD' ? '[PMD]' : '[CS]';
+    const sevConfig = getSeverityConfig(result.severity, isDark, colors);
+    const analyzerLabel = result.analyzerType === 'PMD' ? '[PMD]' : '[Checkstyle]';
     const isCheckstyle = result.analyzerType !== 'PMD';
 
     const hasResult = aiExplanation !== undefined || aiError !== undefined;

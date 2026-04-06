@@ -238,7 +238,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <Github style={{ width: '24px', height: '24px', color: colors.accentLight }} />
                         <label style={{ fontSize: '18px', fontWeight: '600', color: colors.textPrimary }}>
-                            GitHub Repository URL
+                            URL репозиторію GitHub
                         </label>
                     </div>
 
@@ -352,7 +352,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <FileCode style={{ width: '24px', height: '24px', color: colors.success }} />
                             <label style={{ fontSize: '18px', fontWeight: '600', color: colors.textPrimary }}>
-                                Java Code
+                                Java код
                             </label>
                             {fileName && (
                                 <span style={{

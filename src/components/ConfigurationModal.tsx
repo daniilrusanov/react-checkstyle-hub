@@ -654,10 +654,10 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                 e.target.style.borderColor = colors.borderSecondary;
                                             }}
                                         >
-                                            <option value="ignore" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Ignore</option>
-                                            <option value="info" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Info</option>
-                                            <option value="warning" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Warning</option>
-                                            <option value="error" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Error</option>
+                                            <option value="ignore" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Ігнорувати</option>
+                                            <option value="info" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Інформація</option>
+                                            <option value="warning" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Попередження</option>
+                                            <option value="error" style={{ background: isDark ? 'rgb(15, 15, 25)' : 'white', color: colors.textPrimary }}>Помилка</option>
                                         </select>
                                         <p style={{ fontSize: '12px', color: colors.textMuted, marginTop: '6px' }}>
                                             Визначає базовий рівень суворості для всіх перевірок
@@ -780,7 +780,7 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({ isOpen, 
                                                                     ? (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(22, 163, 74, 0.3)')
                                                                     : (isDark ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.25)')}`
                                                             }}>
-                                                                {isEnabled ? 'ON' : 'OFF'}
+                                                                {isEnabled ? 'УВІМК' : 'ВИМК'}
                                                             </div>
                                                         </div>
                                                     </label>
